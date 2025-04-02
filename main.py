@@ -3,6 +3,7 @@ import asyncio
 import aiohttp
 import re
 import urllib.parse
+import uvicorn
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException
@@ -261,6 +262,8 @@ async def get_jpg5_gallery(album_url: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def start():
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    start()
