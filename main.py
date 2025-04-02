@@ -1,4 +1,4 @@
-# main.py
+import os
 import asyncio
 import aiohttp
 import re
@@ -6,7 +6,7 @@ import urllib.parse
 import uvicorn
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -19,6 +19,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ------------------- Root Endpoint ------------------- #
+
+@app.get("/")
+async def read_root():
+    return {"message": "Welcome to my FastAPI app!"}
 
 # ------------------- Your Original Functions ------------------- #
 
@@ -88,7 +94,6 @@ async def get_all_album_links_from_search(username):
         if not links:
             break
         all_links.extend(links)
-        # Check for pagination (this example uses a class-based check)
         async with aiohttp.ClientSession() as session:
             search_url = f"https://bunkr-albums.io/?search={urllib.parse.quote(username)}&page={page}"
             text, _, _ = await get_webpage_content(search_url, session)
