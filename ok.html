@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>After Dark 🌙</title>
+  <link rel="icon" href="https://th.bing.com/th/id/R.90f1e6a7a300b6610b31b393c5b97704?rik=sqYPPWaZK5NEAg&riu=http%3a%2f%2fnsfwexchangecomic.cfw.me%2ffiles%2fmanialogos.png&ehk=ztf8eXTDb%2fiys6vd0LIfLdHhYypGHp4wLIOePUtuM0c%3d&risl=&pid=ImgRaw&r=0">
+  <!-- JSZip and FileSaver libraries for zipping downloads -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    /* Global Styles */
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1b2735, #090a0f);
+      color: #E0E0E0;
+      overflow-x: hidden;
+    }
+    header {
+      text-align: center;
+      padding: 20px;
+      background: #000;
+      border-bottom: 2px solid #444;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 3rem;
+      color: #4CAF50;
+      animation: fadeIn 2s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    header p {
+      margin-top: 10px;
+      font-size: 1.1rem;
+      color: #ccc;
+    }
+    /* Main Layout */
+    .layout {
+      display: flex;
+      min-height: calc(100vh - 80px);
+    }
+    /* Left Sidebar for Model Categories */
+    .sidebar-models {
+      width: 220px;
+      background: linear-gradient(180deg, #111, #333);
+      padding: 15px;
+      border-right: 2px solid #444;
+      overflow-y: auto;
+    }
+    .sidebar-models h2 {
+      font-size: 1.3rem;
+      margin-top: 0;
+      text-align: center;
+      color: #4CAF50;
+    }
+    .model-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .model-list li {
+      padding: 8px 10px;
+      margin: 5px 0;
+      background: #222;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s;
+      display: flex;
+      align-items: center;
+    }
+    .model-list li:hover {
+      background: #4CAF50;
+      color: #fff;
+    }
+    .model-list li img {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-right: 10px;
+    }
+    /* Right Main Content */
+    .main-content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    /* Tabs (top of main-content) */
+    .tabs {
+      display: flex;
+      justify-content: center;
+      background: #222;
+      border-bottom: 2px solid #444;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 15px 25px;
+      cursor: pointer;
+      transition: background 0.3s, color 0.3s;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      margin: 0 5px;
+    }
+    .tab:hover {
+      background: #333;
+    }
+    .tab.active {
+      background: #4CAF50;
+      color: #fff;
+      font-weight: bold;
+    }
+    /* Content Sections */
+    .tab-content {
+      display: none;
+      padding: 20px;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    /* Container for Model Gallery (replaces the model gallery tab) */
+    #model-gallery-container {
+      display: none;
+    }
+    .input-group {
+      margin: 15px 0;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #444;
+      border-radius: 8px;
+      background: #1e1e1e;
+      color: #fff;
+    }
+    .btn {
+      padding: 10px 20px;
+      background: #4CAF50;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-top: 10px;
+    }
+    .btn:hover {
+      background: #45a049;
+    }
+    /* Download Button */
+    #download-selected {
+      display: none;
+      margin-bottom: 10px;
+    }
+    /* Grid for displaying images */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 15px;
+      position: relative;
+    }
+    .grid-item {
+      background: #222;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      position: relative;
+    }
+    .grid-item img {
+      width: 100%;
+      border-radius: 8px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .grid-item img:hover {
+      transform: scale(1.02);
+    }
+    .grid-item img.selected {
+      box-shadow: 0 0 0 4px #4CAF50;
+    }
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 10px;
+      background: #000;
+      border-top: 2px solid #444;
+    }
+    /* Debug Log (hidden by default) */
+    #debug-log {
+      height: 250px;
+      overflow: auto;
+      background: linear-gradient(135deg, #2c3e50, #4ca1af);
+      padding: 10px;
+      border: 2px solid #1abc9c;
+      border-radius: 8px;
+      color: #ecf0f1;
+      font-family: monospace;
+      display: none;
+      margin-top: 20px;
+    }
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      .layout {
+        flex-direction: column;
+      }
+      .sidebar-models {
+        width: 100%;
+        border-right: none;
+        border-bottom: 2px solid #444;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>After Dark 🌙</h1>
+    <img src="https://th.bing.com/th/id/R.90f1e6a7a300b6610b31b393c5b97704?rik=sqYPPWaZK5NEAg&riu=http%3a%2f%2fnsfwexchangecomic.cfw.me%2ffiles%2fmanialogos.png&ehk=ztf8eXTDb%2fiys6vd0LIfLdHhYypGHp4wLIOePUtuM0c%3d&risl=&pid=ImgRaw&r=0" alt="Logo" style="max-width: 100%; border-radius: 10px;">
+    <p>Select a tab to start exploring content.</p>
+  </header>
+
+  <div class="layout">
+    <!-- Left Sidebar: Model Categories -->
+    <div class="sidebar-models">
+      <h2>Models</h2>
+      <ul id="model-category" class="model-list">
+        <!-- Model names and thumbnails will be added here dynamically -->
+      </ul>
+    </div>
+
+    <!-- Right Main Content -->
+    <div class="main-content">
+      <!-- Download Selected Button (global for galleries) -->
+      <button id="download-selected" class="btn" onclick="downloadSelectedImages()">Download Selected</button>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <div class="tab active" data-tab="erome-albums">Erome Albums</div>
+        <div class="tab" data-tab="erome-gallery">Erome Gallery</div>
+        <div class="tab" data-tab="bunkr-albums">Bunkr Albums</div>
+        <div class="tab" data-tab="bunkr-gallery">Bunkr Gallery</div>
+        <div class="tab" data-tab="fapello-gallery">Fapello Gallery</div>
+        <div class="tab" data-tab="jpg5-gallery">JPG5 Gallery</div>
+      </div>
+
+      <!-- Content Sections -->
+      <!-- Erome Albums Tab -->
+      <div id="erome-albums" class="tab-content active">
+        <h2>Search Erome Albums</h2>
+        <div class="input-group">
+          <label for="erome-albums-input">Enter an Erome username:</label>
+          <input type="text" id="erome-albums-input" placeholder="e.g., username123">
+        </div>
+        <button class="btn" onclick="searchEromeAlbums()">Search</button>
+        <div id="erome-albums-results" style="margin-top:20px;"></div>
+      </div>
+
+      <!-- Erome Gallery Tab -->
+      <div id="erome-gallery" class="tab-content">
+        <h2>Erome Image Gallery</h2>
+        <div class="input-group">
+          <label for="erome-gallery-input">Enter an Erome username to fetch images:</label>
+          <input type="text" id="erome-gallery-input" placeholder="e.g., username123">
+        </div>
+        <button class="btn" onclick="fetchEromeGallery()">Fetch Images</button>
+        <div id="erome-gallery-results" style="margin-top:20px;" class="grid"></div>
+      </div>
+
+      <!-- Bunkr Albums Tab -->
+      <div id="bunkr-albums" class="tab-content">
+        <h2>Bunkr Links Finder</h2>
+        <div class="input-group">
+          <label for="bunkr-albums-input">Enter a Bunkr username:</label>
+          <input type="text" id="bunkr-albums-input" placeholder="e.g., username123">
+        </div>
+        <button class="btn" onclick="searchBunkrLinks()">Search</button>
+        <div id="bunkr-albums-results" style="margin-top:20px;"></div>
+      </div>
+
+      <!-- Bunkr Gallery Tab -->
+      <div id="bunkr-gallery" class="tab-content">
+        <h2>Bunkr Image Gallery</h2>
+        <div class="input-group">
+          <label for="bunkr-gallery-input">Enter a Bunkr username for image gallery:</label>
+          <input type="text" id="bunkr-gallery-input" placeholder="e.g., username123">
+        </div>
+        <button class="btn" onclick="fetchBunkrGallery()">Fetch Images</button>
+        <div id="bunkr-gallery-results" style="margin-top:20px;" class="grid"></div>
+      </div>
+
+      <!-- Fapello Gallery Tab -->
+      <div id="fapello-gallery" class="tab-content">
+        <h2>Fapello Image Gallery</h2>
+        <div class="input-group">
+          <label for="fapello-gallery-input">Enter a Fapello album URL:</label>
+          <input type="text" id="fapello-gallery-input" placeholder="e.g., https://fapello.com/emmaxbelle/">
+        </div>
+        <button class="btn" onclick="fetchFapelloGallery()">Fetch Media</button>
+        <div id="fapello-gallery-results" style="margin-top:20px;" class="grid"></div>
+        <div id="fapello-gallery-videos" style="margin-top:20px;"></div>
+      </div>
+
+      <!-- JPG5 Gallery Tab -->
+      <div id="jpg5-gallery" class="tab-content">
+        <h2>JPG5 Image Gallery</h2>
+        <div class="input-group">
+          <label for="jpg5-gallery-input">Enter a JPG5 album URL:</label>
+          <input type="text" id="jpg5-gallery-input" placeholder="e.g., https://jpg5.su/album/...">
+        </div>
+        <button class="btn" onclick="fetchJPG5Gallery()">Fetch Images</button>
+        <div id="jpg5-gallery-results" style="margin-top:20px;" class="grid"></div>
+      </div>
+
+      <!-- Model Gallery Container (hidden by default) -->
+      <div id="model-gallery-container"></div>
+
+      <!-- Debug Log (hidden by default) -->
+      <div id="debug-log"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2025 After Dark. All rights reserved.</p>
+  </footer>
+
+  <script>
+    // API base URL – adjust if your FastAPI backend is hosted elsewhere.
+    const API_BASE = "http://localhost:8000/api";
+
+    // Global variables for image selection
+    let lastClickedIndex = null;
+    let currentGridImages = []; // array of image elements in the active grid
+    let selectedImages = new Set(); // store the URLs of selected images
+
+    // Global object to store model galleries by username.
+    // Structure: { username: [imageURL1, imageURL2, ...] }
+    let modelGalleries = {};
+
+    // On page load, attempt to load saved model galleries from localStorage
+    window.onload = function() {
+      const savedGalleries = localStorage.getItem('modelGalleries');
+      if (savedGalleries) {
+        modelGalleries = JSON.parse(savedGalleries);
+        updateModelSidebar();
+      }
+    };
+
+    // Utility: Append a debug message
+    function debugLog(message) {
+      const logEl = document.getElementById("debug-log");
+      logEl.style.display = "block";
+      logEl.innerHTML += message + "<br>";
+      console.log(message);
+    }
+
+    // Save modelGalleries to localStorage
+    function saveModelGalleries() {
+      localStorage.setItem('modelGalleries', JSON.stringify(modelGalleries));
+    }
+
+    // Tab Switching
+    const tabs = document.querySelectorAll('.tab');
+    const contents = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Hide the model gallery container if visible
+        document.getElementById("model-gallery-container").style.display = "none";
+        // Show the tabs and tab content
+        document.querySelector('.tabs').style.display = "flex";
+        contents.forEach(c => c.classList.remove('active'));
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
+        clearSelection();
+      });
+    });
+
+    // Function to clear current selection and hide download button
+    function clearSelection() {
+      selectedImages.clear();
+      lastClickedIndex = null;
+      currentGridImages.forEach(img => img.classList.remove('selected'));
+      document.getElementById("download-selected").style.display = "none";
+    }
+
+    // Function to attach selection event listeners to all images in a given container
+    function attachImageSelection(container) {
+      currentGridImages = Array.from(container.querySelectorAll('.selectable-image'));
+      currentGridImages.forEach((img, index) => {
+        img.addEventListener('click', (e) => {
+          if (e.shiftKey && lastClickedIndex !== null) {
+            const start = Math.min(lastClickedIndex, index);
+            const end = Math.max(lastClickedIndex, index);
+            for (let i = start; i <= end; i++) {
+              currentGridImages[i].classList.add('selected');
+              selectedImages.add(currentGridImages[i].getAttribute('data-url'));
+            }
+          } else {
+            if (img.classList.contains('selected')) {
+              img.classList.remove('selected');
+              selectedImages.delete(img.getAttribute('data-url'));
+            } else {
+              img.classList.add('selected');
+              selectedImages.add(img.getAttribute('data-url'));
+            }
+            lastClickedIndex = index;
+          }
+          document.getElementById("download-selected").style.display = selectedImages.size > 0 ? "block" : "none";
+        });
+      });
+    }
+
+    // Function to download selected images as a ZIP file using JSZip and FileSaver
+    async function downloadSelectedImages() {
+      if (selectedImages.size === 0) return;
+      const zip = new JSZip();
+      const folder = zip.folder("after_dark_images");
+      const urls = Array.from(selectedImages);
+      for (let i = 0; i < urls.length; i++) {
+        try {
+          const response = await fetch(urls[i]);
+          const blob = await response.blob();
+          const ext = urls[i].split('.').pop().split('?')[0];
+          folder.file(`image_${i}.${ext}`, blob);
+        } catch (err) {
+          debugLog(`Error fetching ${urls[i]}: ${err}`);
+        }
+      }
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, "selected_images.zip");
+    }
+
+    // --- UI Event Functions calling FastAPI endpoints ---
+
+    async function searchEromeAlbums() {
+      const username = document.getElementById("erome-albums-input").value.trim();
+      const resultsDiv = document.getElementById("erome-albums-results");
+      resultsDiv.innerHTML = `<p>Searching for albums by <strong>${username}</strong>...</p>`;
+      try {
+        const response = await fetch(`${API_BASE}/erome-albums?username=${encodeURIComponent(username)}`);
+        const data = await response.json();
+        if (data.albums && data.albums.length) {
+          let html = `<h3>Albums Found:</h3><ul>`;
+          data.albums.forEach(link => {
+            html += `<li><a href="${link}" target="_blank">${link}</a></li>`;
+          });
+          html += `</ul>`;
+          resultsDiv.innerHTML = html;
+        } else {
+          resultsDiv.innerHTML = `<p>No albums found for <strong>${username}</strong>.</p>`;
+        }
+      } catch (err) {
+        resultsDiv.innerHTML = `<p>Error: ${err}</p>`;
+      }
+    }
+
+    async function fetchEromeGallery() {
+      const username = document.getElementById("erome-gallery-input").value.trim();
+      const resultsDiv = document.getElementById("erome-gallery-results");
+      resultsDiv.innerHTML = `<p>Fetching images for <strong>${username}</strong>...</p>`;
+      clearSelection();
+      try {
+        const response = await fetch(`${API_BASE}/erome-gallery?username=${encodeURIComponent(username)}`);
+        const data = await response.json();
+        if (data.images && data.images.length) {
+          let html = "";
+          data.images.forEach(url => {
+            html += `<div class="grid-item"><img src="${url}" data-url="${url}" class="selectable-image" alt="Erome Image"></div>`;
+          });
+          resultsDiv.innerHTML = html;
+          attachImageSelection(resultsDiv);
+          // Save model gallery in global object and update sidebar
+          modelGalleries[username] = data.images;
+          updateModelSidebar();
+          saveModelGalleries();
+        } else {
+          resultsDiv.innerHTML = `<p>No images found for <strong>${username}</strong>.</p>`;
+        }
+      } catch (err) {
+        resultsDiv.innerHTML = `<p>Error: ${err}</p>`;
+      }
+    }
+
+    async function searchBunkrLinks() {
+      const username = document.getElementById("bunkr-albums-input").value.trim();
+      const resultsDiv = document.getElementById("bunkr-albums-results");
+      resultsDiv.innerHTML = `<p>Searching for Bunkr links for <strong>${username}</strong>...</p>`;
+      try {
+        const response = await fetch(`${API_BASE}/bunkr-albums?username=${encodeURIComponent(username)}`);
+        const data = await response.json();
+        if (data.albums && data.albums.length) {
+          let html = `<h3>Found ${data.albums.length} albums:</h3><ul>`;
+          data.albums.forEach(link => {
+            html += `<li><a href="${link}" target="_blank">${link}</a></li>`;
+          });
+          html += `</ul>`;
+          resultsDiv.innerHTML = html;
+        } else {
+          resultsDiv.innerHTML = `<p>No Bunkr links found for <strong>${username}</strong>.</p>`;
+        }
+      } catch (err) {
+        resultsDiv.innerHTML = `<p>Error: ${err}</p>`;
+      }
+    }
+
+    async function fetchBunkrGallery() {
+      const username = document.getElementById("bunkr-gallery-input").value.trim();
+      const resultsDiv = document.getElementById("bunkr-gallery-results");
+      resultsDiv.innerHTML = `<p>Fetching Bunkr images for <strong>${username}</strong>...</p>`;
+      clearSelection();
+      try {
+        const response = await fetch(`${API_BASE}/bunkr-gallery?username=${encodeURIComponent(username)}`);
+        const data = await response.json();
+        if (data.images && data.images.length) {
+          let html = "";
+          data.images.forEach(url => {
+            html += `<div class="grid-item"><img src="${url}" data-url="${url}" class="selectable-image" alt="Bunkr Image"></div>`;
+          });
+          resultsDiv.innerHTML = html;
+          attachImageSelection(resultsDiv);
+          modelGalleries[username] = data.images;
+          updateModelSidebar();
+          saveModelGalleries();
+        } else {
+          resultsDiv.innerHTML = `<p>No images found for <strong>${username}</strong>.</p>`;
+        }
+      } catch (err) {
+        resultsDiv.innerHTML = `<p>Error: ${err}</p>`;
+      }
+    }
+
+    async function fetchFapelloGallery() {
+      const albumUrl = document.getElementById("fapello-gallery-input").value.trim();
+      const resultsDiv = document.getElementById("fapello-gallery-results");
+      const videosDiv = document.getElementById("fapello-gallery-videos");
+      resultsDiv.innerHTML = `<p>Fetching media from album: <strong>${albumUrl}</strong>...</p>`;
+      clearSelection();
+      try {
+        const response = await fetch(`${API_BASE}/fapello-gallery?album_url=${encodeURIComponent(albumUrl)}`);
+        const data = await response.json();
+        let html = "";
+        if (data.images && data.images.length) {
+          html += `<h3>Images Found:</h3><div class="grid">`;
+          data.images.forEach(url => {
+            html += `<div class="grid-item"><img src="${url}" data-url="${url}" class="selectable-image" alt="Fapello Image"></div>`;
+          });
+          html += `</div>`;
+        }
+        resultsDiv.innerHTML = html;
+        if (data.videos && data.videos.length) {
+          let vhtml = `<h3>Videos Found:</h3>`;
+          data.videos.forEach(url => {
+            vhtml += `<video controls width="300"><source src="${url}" type="video/mp4">Your browser does not support the video tag.</video>`;
+          });
+          videosDiv.innerHTML = vhtml;
+        }
+        attachImageSelection(resultsDiv);
+      } catch (err) {
+        resultsDiv.innerHTML = `<p>Error: ${err}</p>`;
+      }
+    }
+
+    async function fetchJPG5Gallery() {
+      const albumUrl = document.getElementById("jpg5-gallery-input").value.trim();
+      const resultsDiv = document.getElementById("jpg5-gallery-results");
+      resultsDiv.innerHTML = `<p>Fetching JPG5 images from album: <strong>${albumUrl}</strong>...</p>`;
+      clearSelection();
+      try {
+        const response = await fetch(`${API_BASE}/jpg5-gallery?album_url=${encodeURIComponent(albumUrl)}`);
+        const data = await response.json();
+        if (data.images && data.images.length) {
+          let html = "";
+          data.images.forEach(url => {
+            html += `<div class="grid-item"><img src="${url}" data-url="${url}" class="selectable-image" alt="JPG5 Image"></div>`;
+          });
+          resultsDiv.innerHTML = html;
+          attachImageSelection(resultsDiv);
+        } else {
+          resultsDiv.innerHTML = `<p>No images found for the provided JPG5 album URL.</p>`;
+        }
+      } catch (err) {
+        resultsDiv.innerHTML = `<p>Error: ${err}</p>`;
+      }
+    }
+
+    // Function to update the model sidebar with thumbnails and model names.
+    // When a model is clicked, the model gallery container is populated and shown.
+    function updateModelSidebar() {
+      const sidebar = document.getElementById("model-category");
+      sidebar.innerHTML = "";
+      // Get sorted model names
+      const models = Object.keys(modelGalleries).sort((a, b) => a.localeCompare(b));
+      models.forEach(model => {
+        // Use the first image as the thumbnail
+        const thumbnail = modelGalleries[model][0] || '';
+        const li = document.createElement("li");
+        li.innerHTML = `<img src="${thumbnail}" alt="${model} Thumbnail"><span>${model}</span>`;
+        li.addEventListener("click", () => {
+          // Hide the tabs and current tab content
+          document.querySelector('.tabs').style.display = "none";
+          contents.forEach(c => c.style.display = "none");
+          // Show the model gallery container and populate it
+          const container = document.getElementById("model-gallery-container");
+          container.style.display = "block";
+          let html = `<button class="btn" onclick="backToTabs()">Back</button>`;
+          html += `<div class="grid">`;
+          modelGalleries[model].forEach(url => {
+            html += `<div class="grid-item"><img src="${url}" data-url="${url}" class="selectable-image" alt="${model} Image"></div>`;
+          });
+          html += `</div>`;
+          container.innerHTML = html;
+          attachImageSelection(container);
+        });
+        sidebar.appendChild(li);
+      });
+    }
+
+    // Function to return to the tabs view from the model gallery container
+    function backToTabs() {
+      document.getElementById("model-gallery-container").style.display = "none";
+      document.querySelector('.tabs').style.display = "flex";
+      // Restore display for active tab content
+      contents.forEach(c => c.style.display = "");
+    }
+  </script>
+</body>
+</html>
