@@ -8,23 +8,32 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 app = FastAPI()
 
-# Allow CORS from your front-end (adjust the origins as needed)
+# Allow CORS from your front-end (adjust as needed)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Use a specific domain in production
+    allow_origins=["*"],  # Use specific domain in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ------------------- Root Endpoint ------------------- #
+# Mount static files (if you have any CSS, JS, etc.)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Set up Jinja2 templates to load HTML files from the "templates" directory
+templates = Jinja2Templates(directory="templates")
+
+# ------------------- Root Endpoint to Serve Your HTML ------------------- #
 
 @app.get("/")
-async def read_root():
-    return {"message": "Welcome to my FastAPI app!"}
+async def read_index(request: Request):
+    # This will load "ok.html" from your "templates" folder
+    return templates.TemplateResponse("ok.html", {"request": request})
 
 # ------------------- Your Original Functions ------------------- #
 
