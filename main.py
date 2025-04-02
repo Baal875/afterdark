@@ -32,7 +32,6 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/")
 async def read_index(request: Request):
-    # This will load "ok.html" from your "templates" folder
     return templates.TemplateResponse("ok.html", {"request": request})
 
 # ------------------- Your Original Functions ------------------- #
