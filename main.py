@@ -34,7 +34,6 @@ templates = Jinja2Templates(directory="templates")
 async def read_index(request: Request):
     return templates.TemplateResponse("ok.html", {"request": request})
 
-
 # ------------------- Helper Functions ------------------- #
 
 def parse_links_and_titles(page_content, pattern, title_class):
@@ -53,6 +52,16 @@ async def get_webpage_content(url, session):
     async with session.get(url, allow_redirects=True) as response:
         text = await response.text()
         return text, str(response.url), response.status
+
+# New helper function to validate an image URL with a HEAD request.
+async def validate_url(url, session):
+    try:
+        async with session.head(url, allow_redirects=True) as response:
+            if response.status == 200:
+                return url
+    except Exception:
+        pass
+    return None
 
 # ------------------- Erome Functions (unchanged) ------------------- #
 
@@ -179,7 +188,11 @@ async def fetch_bunkr_gallery_images(username):
                 tasks.append(get_image_url_from_link(link, session))
         results = await asyncio.gather(*tasks)
         image_urls = [url for url in results if url is not None]
-        return list({url for url in image_urls if "/thumb/" not in url})
+        # Validate each image URL with a HEAD request.
+        validation_tasks = [validate_url(url, session) for url in image_urls]
+        validated_results = await asyncio.gather(*validation_tasks)
+        validated_image_urls = [url for url in validated_results if url is not None]
+        return list({url for url in validated_image_urls if "/thumb/" not in url})
 
 # ------------------- Fapello and JPG5 Functions (unchanged) ------------------- #
 
@@ -263,6 +276,7 @@ async def fetch_fapello_album_media(album_url: str) -> dict:
         media["videos"] = list(set(media["videos"]))
         debug_log(f"[DEBUG] Total media collected for {username}: {len(media['images'])} images and {len(media['videos'])} videos")
         return media
+
 async def extract_jpg5_album_media_urls(album_url):
     media_urls = set()
     next_page_url = album_url.rstrip('/')
