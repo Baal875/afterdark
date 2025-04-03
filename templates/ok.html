@@ -180,17 +180,46 @@
     #letter-model-container {
       display: none;
     }
-    /* Search input for models */
-    #model-search {
+    /* Admin Panel Section */
+    #admin-panel {
+      display: none;
+      padding: 20px;
+      background: #222;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+    #admin-panel h2 {
+      margin-top: 0;
+      color: #4CAF50;
+    }
+    .admin-form-group {
+      margin-bottom: 15px;
+    }
+    .admin-form-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .admin-form-group input {
       width: 100%;
       padding: 8px;
-      margin-bottom: 15px;
       border: 2px solid #444;
       border-radius: 8px;
       background: #1e1e1e;
       color: #fff;
-      font-size: 1rem;
     }
+    .btn {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      background: #4CAF50;
+      color: #fff;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn:hover {
+      background: #43a047;
+    }
+    /* Grid & Image Selection */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -220,6 +249,19 @@
     #download-selected {
       display: none;
       margin-bottom: 10px;
+    }
+    /* Stats Styles */
+    .stats {
+      margin-top: 20px;
+      font-size: 1.1rem;
+    }
+    .online-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: #4CAF50;
+      border-radius: 50%;
+      margin-right: 5px;
     }
     /* Debug Log */
     #debug-log {
@@ -300,6 +342,7 @@
         <div class="tab" data-tab="bunkr-albums">Bunkr Albums</div>
         <div class="tab" data-tab="bunkr-gallery">Bunkr Gallery</div>
         <div class="tab" data-tab="jpg5-gallery">JPG5 Gallery</div>
+        <div class="tab" data-tab="admin-panel" onclick="showAdminPanel(event)">Admin Panel</div>
       </div>
 
       <!-- Content Sections -->
@@ -366,6 +409,30 @@
         <div id="jpg5-gallery-results" style="margin-top:20px;" class="grid"></div>
       </div>
 
+      <!-- Admin Panel Content -->
+      <div id="admin-panel" class="tab-content">
+        <h2>Admin Panel</h2>
+        <!-- Update Model Thumbnail -->
+        <div class="admin-form-group">
+          <label for="model-name">Model Name:</label>
+          <input type="text" id="model-name" placeholder="Enter model name">
+        </div>
+        <div class="admin-form-group">
+          <label for="thumbnail-url">New Thumbnail URL:</label>
+          <input type="text" id="thumbnail-url" placeholder="Enter new thumbnail URL">
+        </div>
+        <button class="btn" onclick="updateThumbnail()">Update Thumbnail</button>
+        <hr>
+        <!-- Site Stats -->
+        <div class="stats">
+          <div>Total Visits: <span id="total-visits">0</span></div>
+          <div>
+            <span class="online-indicator"></span>
+            Currently Online: <span id="online-users">0</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Container for Single Model Gallery -->
       <div id="model-gallery-container"></div>
       <!-- Container for Letter Models (grid view with search) -->
@@ -421,6 +488,9 @@
       }
       renderAlphabetFilter();
       updateJPG5Sidebar();
+      // Start polling for site stats every 5 seconds (requires /api/stats endpoint)
+      setInterval(fetchStats, 5000);
+      fetchStats();
     };
 
     function debugLog(message) {
@@ -451,14 +521,17 @@
     const contents = document.querySelectorAll('.tab-content');
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
-        document.getElementById("letter-model-container").style.display = "none";
-        document.getElementById("model-gallery-container").style.display = "none";
-        document.querySelector('.tabs').style.display = "flex";
-        contents.forEach(c => c.classList.remove('active'));
-        tabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
-        clearSelection();
+        // Skip Admin Panel click here; it will be handled separately.
+        if (tab.getAttribute('data-tab') !== "admin-panel") {
+          document.getElementById("letter-model-container").style.display = "none";
+          document.getElementById("model-gallery-container").style.display = "none";
+          document.querySelector('.tabs').style.display = "flex";
+          contents.forEach(c => c.classList.remove('active'));
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
+          clearSelection();
+        }
       });
     });
 
@@ -635,7 +708,7 @@
           data.videos.forEach(url => {
             vhtml += `<video controls width="300"><source src="${url}" type="video/mp4">Your browser does not support the video tag.</video>`;
           });
-          videosDiv.innerHTML = vhtml;
+          document.getElementById("fapello-gallery-videos").innerHTML = vhtml;
         }
         attachImageSelection(resultsDiv);
         // Save Fapello gallery to models (key starts with "Fapello - ")
@@ -672,6 +745,52 @@
         }
       } catch (err) {
         resultsDiv.innerHTML = `<p>Error: ${err}</p>`;
+      }
+    }
+
+    // --- Admin Panel Functions ---
+    function showAdminPanel(e) {
+      // Prompt for password when clicking Admin Panel tab.
+      let pass = prompt("Enter admin password:");
+      if (pass === "cassidy") {
+        // Activate the admin panel tab.
+        tabs.forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+        contents.forEach(c => c.classList.remove('active'));
+        document.getElementById("admin-panel").classList.add('active');
+      } else {
+        alert("Incorrect password!");
+        // Prevent switching to the admin panel.
+        e.preventDefault();
+      }
+    }
+
+    function updateThumbnail() {
+      const modelName = document.getElementById("model-name").value.trim();
+      const newThumbnail = document.getElementById("thumbnail-url").value.trim();
+      if (!modelName || !newThumbnail) {
+        alert("Please fill in both fields.");
+        return;
+      }
+      if (modelGalleries[modelName] && modelGalleries[modelName].length > 0) {
+        // Update the first image (thumbnail) in the gallery.
+        modelGalleries[modelName][0] = newThumbnail;
+        saveModelGalleries();
+        alert("Thumbnail updated!");
+        // Optionally, refresh any UI related to this model.
+      } else {
+        alert("Model not found in saved galleries.");
+      }
+    }
+
+    async function fetchStats() {
+      try {
+        const response = await fetch(`${API_BASE}/stats`);
+        const data = await response.json();
+        document.getElementById("total-visits").textContent = data.totalVisits || 0;
+        document.getElementById("online-users").textContent = data.onlineUsers || 0;
+      } catch (err) {
+        console.error("Error fetching stats:", err);
       }
     }
 
