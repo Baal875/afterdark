@@ -34,12 +34,27 @@ templates = Jinja2Templates(directory="templates")
 async def read_index(request: Request):
     return templates.TemplateResponse("ok.html", {"request": request})
 
-# ------------------- Your Original Functions ------------------- #
+
+# ------------------- Helper Functions ------------------- #
+
+def parse_links_and_titles(page_content, pattern, title_class):
+    """
+    Parses the page content to extract links that match a given regex pattern
+    and extracts the text of <span> elements with the specified title_class.
+    """
+    soup = BeautifulSoup(page_content, 'html.parser')
+    # Extract links that match the given pattern.
+    links = [a['href'] for a in soup.find_all('a', href=True) if re.match(pattern, a['href'])]
+    # Extract titles from spans with the provided CSS class.
+    titles = [span.get_text() for span in soup.find_all('span', class_=title_class)]
+    return links, titles
 
 async def get_webpage_content(url, session):
     async with session.get(url, allow_redirects=True) as response:
         text = await response.text()
         return text, str(response.url), response.status
+
+# ------------------- Erome Functions (unchanged) ------------------- #
 
 def extract_album_links(page_content):
     soup = BeautifulSoup(page_content, 'html.parser')
@@ -80,28 +95,42 @@ async def fetch_all_erome_image_urls(album_urls):
         all_image_urls = [img_url for images in all_images if isinstance(images, list) for img_url in images]
         return list({url for url in all_image_urls if "/thumb/" not in url})
 
+# ------------------- Updated Bunkr Functions ------------------- #
+
 async def get_album_links_from_search(username, page=1):
+    """
+    For a given username and page number, fetches the search result page
+    from bunkr-albums.io and extracts both album links and their titles.
+    """
     search_url = f"https://bunkr-albums.io/?search={urllib.parse.quote(username)}&page={page}"
     async with aiohttp.ClientSession() as session:
         async with session.get(search_url) as response:
             if response.status != 200:
                 return []
             text = await response.text()
-    soup = BeautifulSoup(text, 'html.parser')
-    album_links = []
-    for tag in soup.find_all('a', href=lambda h: h and h.startswith("https://bunkr.cr/a/")):
-        album_link = tag.get('href')
-        album_links.append(album_link)
-    return album_links
+    # Define the regex pattern for bunkr album URLs and the CSS class for titles.
+    pattern = r"^https://bunkr\.cr/a/.*"
+    title_class = "album-title"  # Adjust this class name as needed
+    links, titles = parse_links_and_titles(text, pattern, title_class)
+    # Create a list of dictionaries combining link and title.
+    albums = []
+    for url, title in zip(links, titles):
+        albums.append({"url": url, "title": title})
+    return albums
 
 async def get_all_album_links_from_search(username):
-    all_links = []
+    """
+    Loops through pages until no further albums are found and returns
+    a list of album dictionaries (each with 'url' and 'title').
+    """
+    all_albums = []
     page = 1
     while True:
-        links = await get_album_links_from_search(username, page)
-        if not links:
+        albums = await get_album_links_from_search(username, page)
+        if not albums:
             break
-        all_links.extend(links)
+        all_albums.extend(albums)
+        # Check for the existence of a next page link in the HTML
         async with aiohttp.ClientSession() as session:
             search_url = f"https://bunkr-albums.io/?search={urllib.parse.quote(username)}&page={page}"
             text, _, _ = await get_webpage_content(search_url, session)
@@ -110,7 +139,7 @@ async def get_all_album_links_from_search(username):
         if not next_page:
             break
         page += 1
-    return all_links
+    return all_albums
 
 async def get_image_links_from_album(album_url, session):
     async with session.get(album_url) as response:
@@ -142,15 +171,17 @@ async def get_image_url_from_link(link, session):
 
 async def fetch_bunkr_gallery_images(username):
     async with aiohttp.ClientSession() as session:
-        album_links = await get_all_album_links_from_search(username)
+        albums = await get_all_album_links_from_search(username)
         tasks = []
-        for album in album_links:
-            img_page_links = await get_image_links_from_album(album, session)
+        for album in albums:
+            img_page_links = await get_image_links_from_album(album["url"], session)
             for link in img_page_links:
                 tasks.append(get_image_url_from_link(link, session))
         results = await asyncio.gather(*tasks)
         image_urls = [url for url in results if url is not None]
         return list({url for url in image_urls if "/thumb/" not in url})
+
+# ------------------- Fapello and JPG5 Functions (unchanged) ------------------- #
 
 async def fetch_fapello_page_media(page_url, session, username):
     async with session.get(page_url) as response:
@@ -246,8 +277,8 @@ async def get_erome_gallery(username: str):
 @app.get("/api/bunkr-albums")
 async def get_bunkr_albums(username: str):
     try:
-        links = await get_all_album_links_from_search(username)
-        return {"albums": links}
+        albums = await get_all_album_links_from_search(username)
+        return {"albums": albums}  # Each album is a dict with 'url' and 'title'
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
