@@ -872,52 +872,16 @@
       }
     }
 
-    // Function to fetch and update total visits
     async function fetchStats() {
       try {
-        const response = await fetch(`${API_BASE}/api/stats`);
+        const response = await fetch(`${API_BASE}/stats`);
         const data = await response.json();
         document.getElementById("total-visits").textContent = data.totalVisits || 0;
+        document.getElementById("online-users").textContent = data.onlineUsers || 0;
       } catch (err) {
         console.error("Error fetching stats:", err);
       }
     }
-    
-    // Update total visits every 10 seconds (adjust interval as needed)
-    setInterval(fetchStats, 10000);
-    fetchStats();
-
-    // Set up WebSocket connection to update online user count in real time
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
-
-    ws.onopen = () => {
-      console.log("WebSocket connected.");
-    };
-
-    // When a message is received (or you can use ping messages from server)
-    ws.onmessage = (event) => {
-      // Update online count by re-fetching stats
-      // Alternatively, you could design the WebSocket to send the online count
-      fetch(`${API_BASE}/api/stats`)
-        .then(response => response.json())
-        .then(data => {
-          document.getElementById("online-users").textContent = data.onlineUsers || 0;
-        })
-        .catch(err => console.error("Error updating online users:", err));
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket disconnected.");
-      document.getElementById("online-users").textContent = "0";
-    };
-
-    // Optionally, send a ping message every 30 seconds to keep the connection alive
-    setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send("ping");
-      }
-    }, 30000);
   </script>
 </body>
 </html>
