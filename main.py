@@ -53,16 +53,6 @@ async def get_webpage_content(url, session):
         text = await response.text()
         return text, str(response.url), response.status
 
-# New helper function to validate an image URL with a HEAD request.
-async def validate_url(url, session):
-    try:
-        async with session.head(url, allow_redirects=True) as response:
-            if response.status == 200:
-                return url
-    except Exception:
-        pass
-    return None
-
 # ------------------- Erome Functions (unchanged) ------------------- #
 
 def extract_album_links(page_content):
@@ -178,6 +168,17 @@ async def get_image_url_from_link(link, session):
         return image_url
     return None
 
+# Updated validate_url using a GET request with Range header.
+async def validate_url(url, session):
+    try:
+        headers = {"Range": "bytes=0-0"}
+        async with session.get(url, headers=headers, allow_redirects=True) as response:
+            if response.status == 200:
+                return url
+    except Exception:
+        pass
+    return None
+
 async def fetch_bunkr_gallery_images(username):
     async with aiohttp.ClientSession() as session:
         albums = await get_all_album_links_from_search(username)
@@ -187,13 +188,17 @@ async def fetch_bunkr_gallery_images(username):
             for link in img_page_links:
                 tasks.append(get_image_url_from_link(link, session))
         results = await asyncio.gather(*tasks)
-        # Filter out None and any URLs containing "/thumb/" immediately.
-        image_urls = [url for url in results if url is not None and "/thumb/" not in url]
-        # Validate each image URL with a HEAD request.
+        # Debug: log the raw results
+        print("Raw image URLs:", results)
+        # Filter out None and any URLs matching the thumb pattern.
+        image_urls = [url for url in results if url is not None and not thumb_pattern.search(url)]
+        print("Pre-validation filtered URLs:", image_urls)
+        # Validate each image URL with a GET request that only requests the first byte.
         validation_tasks = [validate_url(url, session) for url in image_urls]
         validated_results = await asyncio.gather(*validation_tasks)
-        # Filter out invalid results and any that might include "/thumb/".
-        validated_image_urls = [url for url in validated_results if url is not None and "/thumb/" not in url]
+        # Final filtering with the thumb check.
+        validated_image_urls = [url for url in validated_results if url is not None and not thumb_pattern.search(url)]
+        print("Final validated URLs:", validated_image_urls)
         return list({url for url in validated_image_urls})
 
 # ------------------- Fapello and JPG5 Functions (unchanged) ------------------- #
