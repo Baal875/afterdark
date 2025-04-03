@@ -57,31 +57,51 @@
       text-align: center;
       color: #4CAF50;
     }
-    .model-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
+    /* Alphabetical Filter Styles */
+    .alphabet-filter {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 10px;
     }
-    .model-list li {
-      padding: 8px 10px;
-      margin: 5px 0;
+    .alphabet-letter {
+      margin: 2px;
+      padding: 5px 8px;
       background: #222;
-      border-radius: 6px;
+      border-radius: 4px;
       cursor: pointer;
       transition: background 0.3s;
-      display: flex;
-      align-items: center;
+      font-size: 0.9rem;
     }
-    .model-list li:hover {
+    .alphabet-letter:hover {
+      background: #333;
+    }
+    .alphabet-letter.active {
       background: #4CAF50;
       color: #fff;
     }
-    .model-list li img {
-      width: 40px;
-      height: 40px;
+    /* Models Sidebar Grid (kept for reference or other uses) */
+    #model-category {
+      display: none; /* hidden since we now use the full section view */
+    }
+    .model-item {
+      background: #222;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 5px;
+      text-align: center;
+      transition: background 0.3s;
+    }
+    .model-item:hover {
+      background: #4CAF50;
+      color: #fff;
+    }
+    .model-item img {
+      width: 100%;
+      height: 60px;
       object-fit: cover;
       border-radius: 4px;
-      margin-right: 10px;
+      margin-bottom: 4px;
     }
     /* Right Main Content */
     .main-content {
@@ -122,45 +142,14 @@
     .tab-content.active {
       display: block;
     }
-    /* Container for Model Gallery (replaces the model gallery tab) */
+    /* Model Gallery Container (for single model view) */
     #model-gallery-container {
       display: none;
     }
-    .input-group {
-      margin: 15px 0;
-    }
-    .input-group label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-    }
-    .input-group input {
-      width: 100%;
-      padding: 10px;
-      border: 2px solid #444;
-      border-radius: 8px;
-      background: #1e1e1e;
-      color: #fff;
-    }
-    .btn {
-      padding: 10px 20px;
-      background: #4CAF50;
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      cursor: pointer;
-      transition: background 0.3s;
-      margin-top: 10px;
-    }
-    .btn:hover {
-      background: #45a049;
-    }
-    /* Download Button */
-    #download-selected {
+    /* New: Letter Model Container (for grid view of models in a letter category) */
+    #letter-model-container {
       display: none;
-      margin-bottom: 10px;
     }
-    /* Grid for displaying images */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -186,12 +175,10 @@
     .grid-item img.selected {
       box-shadow: 0 0 0 4px #4CAF50;
     }
-    /* Footer */
-    footer {
-      text-align: center;
-      padding: 10px;
-      background: #000;
-      border-top: 2px solid #444;
+    /* Download Button */
+    #download-selected {
+      display: none;
+      margin-bottom: 10px;
     }
     /* Debug Log (hidden by default) */
     #debug-log {
@@ -205,6 +192,13 @@
       font-family: monospace;
       display: none;
       margin-top: 20px;
+    }
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 10px;
+      background: #000;
+      border-top: 2px solid #444;
     }
     /* Responsive Adjustments */
     @media (max-width: 768px) {
@@ -227,17 +221,18 @@
   </header>
 
   <div class="layout">
-    <!-- Left Sidebar: Model Categories -->
+    <!-- Left Sidebar: Models & Alphabet Filter -->
     <div class="sidebar-models">
       <h2>Models</h2>
-      <ul id="model-category" class="model-list">
-        <!-- Model names and thumbnails will be added here dynamically -->
-      </ul>
+      <!-- Alphabetical Filter -->
+      <div id="alphabet-filter" class="alphabet-filter"></div>
+      <!-- (Optional) You can keep a hidden sidebar grid if needed -->
+      <div id="model-category"></div>
     </div>
 
     <!-- Right Main Content -->
     <div class="main-content">
-      <!-- Download Selected Button (global for galleries) -->
+      <!-- Download Selected Button -->
       <button id="download-selected" class="btn" onclick="downloadSelectedImages()">Download Selected</button>
 
       <!-- Tabs -->
@@ -251,7 +246,6 @@
       </div>
 
       <!-- Content Sections -->
-      <!-- Erome Albums Tab -->
       <div id="erome-albums" class="tab-content active">
         <h2>Search Erome Albums</h2>
         <div class="input-group">
@@ -262,7 +256,6 @@
         <div id="erome-albums-results" style="margin-top:20px;"></div>
       </div>
 
-      <!-- Erome Gallery Tab -->
       <div id="erome-gallery" class="tab-content">
         <h2>Erome Image Gallery</h2>
         <div class="input-group">
@@ -273,7 +266,6 @@
         <div id="erome-gallery-results" style="margin-top:20px;" class="grid"></div>
       </div>
 
-      <!-- Bunkr Albums Tab -->
       <div id="bunkr-albums" class="tab-content">
         <h2>Bunkr Links Finder</h2>
         <div class="input-group">
@@ -284,7 +276,6 @@
         <div id="bunkr-albums-results" style="margin-top:20px;"></div>
       </div>
 
-      <!-- Bunkr Gallery Tab -->
       <div id="bunkr-gallery" class="tab-content">
         <h2>Bunkr Image Gallery</h2>
         <div class="input-group">
@@ -295,7 +286,6 @@
         <div id="bunkr-gallery-results" style="margin-top:20px;" class="grid"></div>
       </div>
 
-      <!-- Fapello Gallery Tab -->
       <div id="fapello-gallery" class="tab-content">
         <h2>Fapello Image Gallery</h2>
         <div class="input-group">
@@ -307,7 +297,6 @@
         <div id="fapello-gallery-videos" style="margin-top:20px;"></div>
       </div>
 
-      <!-- JPG5 Gallery Tab -->
       <div id="jpg5-gallery" class="tab-content">
         <h2>JPG5 Image Gallery</h2>
         <div class="input-group">
@@ -318,10 +307,12 @@
         <div id="jpg5-gallery-results" style="margin-top:20px;" class="grid"></div>
       </div>
 
-      <!-- Model Gallery Container (hidden by default) -->
+      <!-- Container for Single Model Gallery -->
       <div id="model-gallery-container"></div>
+      <!-- Container for Letter Models (grid view of models starting with a letter) -->
+      <div id="letter-model-container"></div>
 
-      <!-- Debug Log (hidden by default) -->
+      <!-- Debug Log -->
       <div id="debug-log"></div>
     </div>
   </div>
@@ -343,13 +334,13 @@
     // Structure: { username: [imageURL1, imageURL2, ...] }
     let modelGalleries = {};
 
-    // On page load, attempt to load saved model galleries from localStorage
+    // On page load, load saved model galleries and render the alphabetical filter.
     window.onload = function() {
       const savedGalleries = localStorage.getItem('modelGalleries');
       if (savedGalleries) {
         modelGalleries = JSON.parse(savedGalleries);
-        updateModelSidebar();
       }
+      renderAlphabetFilter();
     };
 
     // Utility: Append a debug message
@@ -370,9 +361,9 @@
     const contents = document.querySelectorAll('.tab-content');
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
-        // Hide the model gallery container if visible
+        // Show tabs and tab content; hide letter model container if open.
+        document.getElementById("letter-model-container").style.display = "none";
         document.getElementById("model-gallery-container").style.display = "none";
-        // Show the tabs and tab content
         document.querySelector('.tabs').style.display = "flex";
         contents.forEach(c => c.classList.remove('active'));
         tabs.forEach(t => t.classList.remove('active'));
@@ -382,7 +373,7 @@
       });
     });
 
-    // Function to clear current selection and hide download button
+    // Clear current selection and hide download button
     function clearSelection() {
       selectedImages.clear();
       lastClickedIndex = null;
@@ -390,7 +381,7 @@
       document.getElementById("download-selected").style.display = "none";
     }
 
-    // Function to attach selection event listeners to all images in a given container
+    // Attach image selection listeners to images in a container
     function attachImageSelection(container) {
       currentGridImages = Array.from(container.querySelectorAll('.selectable-image'));
       currentGridImages.forEach((img, index) => {
@@ -417,7 +408,7 @@
       });
     }
 
-    // Function to download selected images as a ZIP file using JSZip and FileSaver
+    // Download selected images as a ZIP file
     async function downloadSelectedImages() {
       if (selectedImages.size === 0) return;
       const zip = new JSZip();
@@ -438,7 +429,6 @@
     }
 
     // --- UI Event Functions calling FastAPI endpoints ---
-
     async function searchEromeAlbums() {
       const username = document.getElementById("erome-albums-input").value.trim();
       const resultsDiv = document.getElementById("erome-albums-results");
@@ -476,9 +466,8 @@
           });
           resultsDiv.innerHTML = html;
           attachImageSelection(resultsDiv);
-          // Save model gallery in global object and update sidebar
+          // Save model gallery in global object and update storage
           modelGalleries[username] = data.images;
-          updateModelSidebar();
           saveModelGalleries();
         } else {
           resultsDiv.innerHTML = `<p>No images found for <strong>${username}</strong>.</p>`;
@@ -526,7 +515,6 @@
           resultsDiv.innerHTML = html;
           attachImageSelection(resultsDiv);
           modelGalleries[username] = data.images;
-          updateModelSidebar();
           saveModelGalleries();
         } else {
           resultsDiv.innerHTML = `<p>No images found for <strong>${username}</strong>.</p>`;
@@ -590,43 +578,83 @@
       }
     }
 
-    // Function to update the model sidebar with thumbnails and model names.
-    // When a model is clicked, the model gallery container is populated and shown.
-    function updateModelSidebar() {
-      const sidebar = document.getElementById("model-category");
-      sidebar.innerHTML = "";
-      // Get sorted model names
-      const models = Object.keys(modelGalleries).sort((a, b) => a.localeCompare(b));
-      models.forEach(model => {
-        // Use the first image as the thumbnail
-        const thumbnail = modelGalleries[model][0] || '';
-        const li = document.createElement("li");
-        li.innerHTML = `<img src="${thumbnail}" alt="${model} Thumbnail"><span>${model}</span>`;
-        li.addEventListener("click", () => {
-          // Hide the tabs and current tab content
-          document.querySelector('.tabs').style.display = "none";
-          contents.forEach(c => c.style.display = "none");
-          // Show the model gallery container and populate it
-          const container = document.getElementById("model-gallery-container");
-          container.style.display = "block";
-          let html = `<button class="btn" onclick="backToTabs()">Back</button>`;
-          html += `<div class="grid">`;
-          modelGalleries[model].forEach(url => {
-            html += `<div class="grid-item"><img src="${url}" data-url="${url}" class="selectable-image" alt="${model} Image"></div>`;
-          });
-          html += `</div>`;
-          container.innerHTML = html;
-          attachImageSelection(container);
+    // --- Alphabetical Filter & Letter Models View ---
+
+    // Render the alphabetical filter in the sidebar.
+    function renderAlphabetFilter() {
+      const container = document.getElementById("alphabet-filter");
+      const letters = ["All","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
+      container.innerHTML = "";
+      letters.forEach(letter => {
+        const span = document.createElement("span");
+        span.textContent = letter;
+        span.classList.add("alphabet-letter");
+        span.addEventListener("click", () => {
+          openLetterModels(letter);
         });
-        sidebar.appendChild(li);
+        container.appendChild(span);
       });
     }
 
-    // Function to return to the tabs view from the model gallery container
+    // Open a full section with grid view of models whose names start with the given letter.
+    function openLetterModels(letter) {
+      // Hide tabs and other sections
+      document.querySelector('.tabs').style.display = "none";
+      contents.forEach(c => c.style.display = "none");
+      document.getElementById("model-gallery-container").style.display = "none";
+
+      const container = document.getElementById("letter-model-container");
+      container.style.display = "block";
+      let html = `<button class="btn" onclick="backToTabs()">Back</button>`;
+      html += `<h2>Models starting with "${letter}"</h2>`;
+      html += `<div class="grid">`;
+
+      // Get models sorted alphabetically from our stored galleries.
+      const models = Object.keys(modelGalleries).sort((a, b) => a.localeCompare(b));
+      const filteredModels = letter === "All" ? models : models.filter(m => m.charAt(0).toUpperCase() === letter);
+      if (filteredModels.length === 0) {
+        html += `<p>No models found starting with "${letter}".</p>`;
+      } else {
+        filteredModels.forEach(model => {
+          const thumbnail = modelGalleries[model][0] || '';
+          html += `<div class="grid-item" onclick="openModelGallery('${model}')">
+                    <img src="${thumbnail}" alt="${model} Thumbnail">
+                    <div>${model}</div>
+                   </div>`;
+        });
+      }
+      html += `</div>`;
+      container.innerHTML = html;
+    }
+
+    // Open the selected model's gallery (from letter grid view)
+    function openModelGallery(model) {
+      // Hide the letter model container and tabs.
+      document.getElementById("letter-model-container").style.display = "none";
+      document.querySelector('.tabs').style.display = "none";
+      contents.forEach(c => c.style.display = "none");
+      
+      // Show the model gallery container and populate it with the model's images.
+      const container = document.getElementById("model-gallery-container");
+      container.style.display = "block";
+      let html = `<button class="btn" onclick="backToTabs()">Back</button>`;
+      html += `<h2>${model}'s Gallery</h2>`;
+      html += `<div class="grid">`;
+      modelGalleries[model].forEach(url => {
+        html += `<div class="grid-item">
+                   <img src="${url}" data-url="${url}" class="selectable-image" alt="${model} Image">
+                 </div>`;
+      });
+      html += `</div>`;
+      container.innerHTML = html;
+      attachImageSelection(container);
+    }
+
+    // Return to tabs view from any full-screen model section.
     function backToTabs() {
+      document.getElementById("letter-model-container").style.display = "none";
       document.getElementById("model-gallery-container").style.display = "none";
       document.querySelector('.tabs').style.display = "flex";
-      // Restore display for active tab content
       contents.forEach(c => c.style.display = "");
     }
   </script>
