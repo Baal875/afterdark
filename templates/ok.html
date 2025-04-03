@@ -434,6 +434,19 @@
       localStorage.setItem('modelGalleries', JSON.stringify(modelGalleries));
     }
 
+    // Helper function to merge new images into an existing gallery without duplicates.
+    function mergeGallery(existingGallery, newImages) {
+      if (!existingGallery) {
+        return newImages;
+      }
+      newImages.forEach(img => {
+        if (!existingGallery.includes(img)) {
+          existingGallery.push(img);
+        }
+      });
+      return existingGallery;
+    }
+
     const tabs = document.querySelectorAll('.tab');
     const contents = document.querySelectorAll('.tab-content');
     tabs.forEach(tab => {
@@ -539,7 +552,8 @@
           });
           resultsDiv.innerHTML = html;
           attachImageSelection(resultsDiv);
-          modelGalleries[username] = data.images;
+          // Merge new images with any existing gallery for this username
+          modelGalleries[username] = mergeGallery(modelGalleries[username], data.images);
           saveModelGalleries();
         } else {
           resultsDiv.innerHTML = `<p>No images found for <strong>${username}</strong>.</p>`;
@@ -587,7 +601,8 @@
           });
           resultsDiv.innerHTML = html;
           attachImageSelection(resultsDiv);
-          modelGalleries[username] = data.images;
+          // Merge new images with any existing gallery for this username
+          modelGalleries[username] = mergeGallery(modelGalleries[username], data.images);
           saveModelGalleries();
         } else {
           resultsDiv.innerHTML = `<p>No images found for <strong>${username}</strong>.</p>`;
