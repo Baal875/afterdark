@@ -57,16 +57,6 @@ total_visits = 0
 # For tracking active WebSocket connections
 active_connections = set()
 
-# ------------------- Stats Middleware ------------------- #
-class StatsMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        global total_visits
-        total_visits += 1
-        response = await call_next(request)
-        return response
-
-app.add_middleware(StatsMiddleware)
-
 # ------------------- Helper Functions ------------------- #
 def parse_links_and_titles(page_content, pattern, title_class):
     soup = BeautifulSoup(page_content, 'html.parser')
