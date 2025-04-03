@@ -91,6 +91,7 @@
       padding: 5px;
       text-align: center;
       transition: background 0.3s;
+      margin-bottom: 8px;
     }
     .model-item:hover {
       background: #4CAF50;
@@ -102,6 +103,16 @@
       object-fit: cover;
       border-radius: 4px;
       margin-bottom: 4px;
+    }
+    /* NEW: JPG5 Albums Section in Sidebar */
+    #saved-jpg5 {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    #saved-jpg5 .model-item {
+      padding: 4px;
     }
     /* Right Main Content */
     .main-content {
@@ -142,11 +153,30 @@
     .tab-content.active {
       display: block;
     }
-    /* Model Gallery Container (for single model view) */
-    #model-gallery-container {
-      display: none;
+    /* Link Display Styles for Fetched Albums/Links */
+    .link-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
     }
-    /* Letter Model Container (for grid view of models in a letter category) */
+    .link-item {
+      background: #222;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      transition: background 0.3s;
+    }
+    .link-item a {
+      color: #4CAF50;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .link-item:hover {
+      background: #333;
+    }
+    /* Model Gallery & Letter Models Containers */
+    #model-gallery-container,
     #letter-model-container {
       display: none;
     }
@@ -253,6 +283,9 @@
       <div id="alphabet-filter" class="alphabet-filter"></div>
       <!-- (Hidden grid if needed) -->
       <div id="model-category"></div>
+      <!-- NEW: JPG5 Albums Section -->
+      <h2>JPG5 Albums</h2>
+      <div id="saved-jpg5"></div>
     </div>
 
     <!-- Right Main Content -->
@@ -266,7 +299,6 @@
         <div class="tab" data-tab="erome-gallery">Erome Gallery</div>
         <div class="tab" data-tab="bunkr-albums">Bunkr Albums</div>
         <div class="tab" data-tab="bunkr-gallery">Bunkr Gallery</div>
-        <div class="tab" data-tab="fapello-gallery">Fapello Gallery</div>
         <div class="tab" data-tab="jpg5-gallery">JPG5 Gallery</div>
       </div>
 
@@ -278,6 +310,7 @@
           <input type="text" id="erome-albums-input" placeholder="e.g., username123">
         </div>
         <button class="btn" onclick="searchEromeAlbums()">Search</button>
+        <!-- Fetched album links will be displayed here -->
         <div id="erome-albums-results" style="margin-top:20px;"></div>
       </div>
 
@@ -298,6 +331,7 @@
           <input type="text" id="bunkr-albums-input" placeholder="e.g., username123">
         </div>
         <button class="btn" onclick="searchBunkrLinks()">Search</button>
+        <!-- Fetched bunkr links will be displayed here -->
         <div id="bunkr-albums-results" style="margin-top:20px;"></div>
       </div>
 
@@ -354,17 +388,14 @@
       alert("learn to code html yourself skid");
       location.reload();
     });
-
-    // Prevent specific key combinations for viewing source or opening dev tools
+    // Prevent specific key combinations (Ctrl+U, F12)
     document.onkeydown = function(e) {
-      // Disable Ctrl+U
       if (e.ctrlKey && (e.key === 'u' || e.key === 'U')) {
         e.preventDefault();
         alert("learn to code html yourself skid");
         location.reload();
       }
-      // Disable F12 key (Dev Tools)
-      if (e.keyCode === 123) {
+      if (e.keyCode === 123) { // F12 key
         e.preventDefault();
         alert("learn to code html yourself skid");
         location.reload();
@@ -376,26 +407,22 @@
   <script>
     // API base URL – adjust if your FastAPI backend is hosted elsewhere.
     const API_BASE = "http://localhost:8000/api";
-
-    // Global variables for image selection
     let lastClickedIndex = null;
-    let currentGridImages = []; // array of image elements in the active grid
-    let selectedImages = new Set(); // store the URLs of selected images
-
-    // Global object to store model galleries by username.
-    // Structure: { username: [imageURL1, imageURL2, ...] }
+    let currentGridImages = [];
+    let selectedImages = new Set();
+    // Global storage for model galleries (each key maps to an array of image URLs)
+    // Keys can be usernames or generated strings like "Fapello - [date]" or "JPG5 - [date]"
     let modelGalleries = {};
 
-    // On page load, load saved model galleries and render the alphabetical filter.
     window.onload = function() {
       const savedGalleries = localStorage.getItem('modelGalleries');
       if (savedGalleries) {
         modelGalleries = JSON.parse(savedGalleries);
       }
       renderAlphabetFilter();
+      updateJPG5Sidebar();
     };
 
-    // Utility: Append a debug message
     function debugLog(message) {
       const logEl = document.getElementById("debug-log");
       logEl.style.display = "block";
@@ -403,12 +430,10 @@
       console.log(message);
     }
 
-    // Save modelGalleries to localStorage
     function saveModelGalleries() {
       localStorage.setItem('modelGalleries', JSON.stringify(modelGalleries));
     }
 
-    // Tab Switching
     const tabs = document.querySelectorAll('.tab');
     const contents = document.querySelectorAll('.tab-content');
     tabs.forEach(tab => {
@@ -424,7 +449,6 @@
       });
     });
 
-    // Clear selection
     function clearSelection() {
       selectedImages.clear();
       lastClickedIndex = null;
@@ -432,7 +456,6 @@
       document.getElementById("download-selected").style.display = "none";
     }
 
-    // Attach selection to images in a container
     function attachImageSelection(container) {
       currentGridImages = Array.from(container.querySelectorAll('.selectable-image'));
       currentGridImages.forEach((img, index) => {
@@ -459,7 +482,6 @@
       });
     }
 
-    // Download selected images as a ZIP file
     async function downloadSelectedImages() {
       if (selectedImages.size === 0) return;
       const zip = new JSZip();
@@ -479,7 +501,6 @@
       saveAs(content, "selected_images.zip");
     }
 
-    // --- API UI Event Functions ---
     async function searchEromeAlbums() {
       const username = document.getElementById("erome-albums-input").value.trim();
       const resultsDiv = document.getElementById("erome-albums-results");
@@ -488,11 +509,12 @@
         const response = await fetch(`${API_BASE}/erome-albums?username=${encodeURIComponent(username)}`);
         const data = await response.json();
         if (data.albums && data.albums.length) {
-          let html = `<h3>Albums Found:</h3><ul>`;
+          let html = `<h3>Albums Found:</h3>`;
+          html += `<div class="link-container">`;
           data.albums.forEach(link => {
-            html += `<li><a href="${link}" target="_blank">${link}</a></li>`;
+            html += `<div class="link-item"><a href="${link}" target="_blank">${link}</a></div>`;
           });
-          html += `</ul>`;
+          html += `</div>`;
           resultsDiv.innerHTML = html;
         } else {
           resultsDiv.innerHTML = `<p>No albums found for <strong>${username}</strong>.</p>`;
@@ -517,7 +539,6 @@
           });
           resultsDiv.innerHTML = html;
           attachImageSelection(resultsDiv);
-          // Save model gallery in storage
           modelGalleries[username] = data.images;
           saveModelGalleries();
         } else {
@@ -536,11 +557,12 @@
         const response = await fetch(`${API_BASE}/bunkr-albums?username=${encodeURIComponent(username)}`);
         const data = await response.json();
         if (data.albums && data.albums.length) {
-          let html = `<h3>Found ${data.albums.length} albums:</h3><ul>`;
+          let html = `<h3>Found ${data.albums.length} albums:</h3>`;
+          html += `<div class="link-container">`;
           data.albums.forEach(link => {
-            html += `<li><a href="${link}" target="_blank">${link}</a></li>`;
+            html += `<div class="link-item"><a href="${link}" target="_blank">${link}</a></div>`;
           });
-          html += `</ul>`;
+          html += `</div>`;
           resultsDiv.innerHTML = html;
         } else {
           resultsDiv.innerHTML = `<p>No Bunkr links found for <strong>${username}</strong>.</p>`;
@@ -601,6 +623,10 @@
           videosDiv.innerHTML = vhtml;
         }
         attachImageSelection(resultsDiv);
+        // Save Fapello gallery to models (key starts with "Fapello - ")
+        let key = "Fapello - " + new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString();
+        modelGalleries[key] = data.images;
+        saveModelGalleries();
       } catch (err) {
         resultsDiv.innerHTML = `<p>Error: ${err}</p>`;
       }
@@ -621,6 +647,11 @@
           });
           resultsDiv.innerHTML = html;
           attachImageSelection(resultsDiv);
+          // Save JPG5 gallery with key "JPG5 - " and current date/time
+          let key = "JPG5 - " + new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString();
+          modelGalleries[key] = data.images;
+          saveModelGalleries();
+          updateJPG5Sidebar();
         } else {
           resultsDiv.innerHTML = `<p>No images found for the provided JPG5 album URL.</p>`;
         }
@@ -645,19 +676,16 @@
       });
     }
 
-    // Open a full section with grid view of models (with search) filtered by letter.
     function openLetterModels(letter) {
       document.querySelector('.tabs').style.display = "none";
       contents.forEach(c => c.style.display = "none");
       document.getElementById("model-gallery-container").style.display = "none";
-
       const container = document.getElementById("letter-model-container");
       container.style.display = "block";
       let html = `<button class="btn" onclick="backToTabs()">Back</button>`;
       html += `<h2>Models starting with "${letter}"</h2>`;
       html += `<input type="text" id="model-search" placeholder="Search models..." onkeyup="filterModels('${letter}')">`;
       html += `<div id="letter-model-grid" class="grid">`;
-
       const models = Object.keys(modelGalleries).sort((a, b) => a.localeCompare(b));
       const filteredModels = letter === "All" ? models : models.filter(m => m.charAt(0).toUpperCase() === letter);
       if (filteredModels.length === 0) {
@@ -675,7 +703,6 @@
       container.innerHTML = html;
     }
 
-    // Filter models by search query within the letter group.
     function filterModels(letter) {
       const query = document.getElementById("model-search").value.toLowerCase();
       const grid = document.getElementById("letter-model-grid");
@@ -699,12 +726,10 @@
       grid.innerHTML = html;
     }
 
-    // Open the selected model's gallery.
     function openModelGallery(model) {
       document.getElementById("letter-model-container").style.display = "none";
       document.querySelector('.tabs').style.display = "none";
       contents.forEach(c => c.style.display = "none");
-
       const container = document.getElementById("model-gallery-container");
       container.style.display = "block";
       let html = `<button class="btn" onclick="backToTabs()">Back</button>`;
@@ -720,12 +745,32 @@
       attachImageSelection(container);
     }
 
-    // Return to the main tabs view.
     function backToTabs() {
       document.getElementById("letter-model-container").style.display = "none";
       document.getElementById("model-gallery-container").style.display = "none";
       document.querySelector('.tabs').style.display = "flex";
       contents.forEach(c => c.style.display = "");
+    }
+
+    // NEW: Update the sidebar section for JPG5 albums
+    function updateJPG5Sidebar() {
+      const container = document.getElementById("saved-jpg5");
+      container.innerHTML = "";
+      const keys = Object.keys(modelGalleries).filter(key => key.startsWith("JPG5 -")).sort();
+      if (keys.length === 0) {
+        container.innerHTML = "<p style='font-size:0.9rem; text-align:center;'>No JPG5 albums saved.</p>";
+      } else {
+        keys.forEach(key => {
+          const thumbnail = modelGalleries[key][0] || '';
+          const div = document.createElement("div");
+          div.classList.add("model-item");
+          div.innerHTML = `<img src="${thumbnail}" alt="${key} Thumbnail"><span style="font-size:0.75rem;">${key}</span>`;
+          div.addEventListener("click", () => {
+            openModelGallery(key);
+          });
+          container.appendChild(div);
+        });
+      }
     }
   </script>
 </body>
