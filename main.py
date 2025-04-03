@@ -6,7 +6,7 @@ import urllib.parse
 import uvicorn
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -14,20 +14,18 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 app = FastAPI()
 
-# Global stats variables
+# Global stats variable for total visits
 total_visits = 0
-online_users = 0
+
+# For tracking active WebSocket connections (used to determine online users)
+active_connections = set()
 
 # ------------------- Stats Middleware ------------------- #
 class StatsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        global total_visits, online_users
+        global total_visits
         total_visits += 1
-        online_users += 1
-        try:
-            response = await call_next(request)
-        finally:
-            online_users -= 1
+        response = await call_next(request)
         return response
 
 app.add_middleware(StatsMiddleware)
@@ -35,27 +33,19 @@ app.add_middleware(StatsMiddleware)
 # ------------------- CORS and Static Files ------------------- #
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Use specific domain in production
+    allow_origins=["*"],  # In production, use a specific domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
 templates = Jinja2Templates(directory="templates")
 
 # ------------------- Root Endpoint ------------------- #
 @app.get("/")
 async def read_index(request: Request):
     return templates.TemplateResponse("ok.html", {"request": request})
-
-
-# Global stats variables
-total_visits = 0
-
-# For tracking active WebSocket connections
-active_connections = set()
 
 # ------------------- Helper Functions ------------------- #
 def parse_links_and_titles(page_content, pattern, title_class):
@@ -109,7 +99,7 @@ async def fetch_all_erome_image_urls(album_urls):
         all_image_urls = [img_url for images in all_images if isinstance(images, list) for img_url in images]
         return list({url for url in all_image_urls if "/thumb/" not in url})
 
-# ------------------- Updated Bunkr Functions ------------------- #
+# ------------------- Bunkr Functions ------------------- #
 async def get_album_links_from_search(username, page=1):
     search_url = f"https://bunkr-albums.io/?search={urllib.parse.quote(username)}&page={page}"
     async with aiohttp.ClientSession() as session:
@@ -180,7 +170,6 @@ async def validate_url(url, session):
         pass
     return None
 
-# For thumb filtering (make sure to define thumb_pattern)
 thumb_pattern = re.compile(r"/thumb/")
 
 async def fetch_bunkr_gallery_images(username):
@@ -342,10 +331,10 @@ async def get_jpg5_gallery(album_url: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ------------------- Stats Endpoint ------------------- #
 @app.get("/api/stats")
 async def get_stats():
-    # Online users count is now the count of active WebSocket connections
-    online_users = len(active_connections)
+    online_users = len(active_connections)  # Count of active WebSocket connections
     return {"totalVisits": total_visits, "onlineUsers": online_users}
 
 # ------------------- WebSocket Endpoint for Live Online Count ------------------- #
@@ -355,9 +344,9 @@ async def websocket_endpoint(websocket: WebSocket):
     active_connections.add(websocket)
     try:
         while True:
-            # Here you can implement ping/pong or wait for client messages if needed.
-            data = await websocket.receive_text()  # block until message is received
-            # Echo back (or you could simply ignore messages)
+            # Wait for messages (or you can implement a ping mechanism)
+            data = await websocket.receive_text()
+            # For demo, echo received message; alternatively trigger an update
             await websocket.send_text(f"Message received: {data}")
     except WebSocketDisconnect:
         active_connections.remove(websocket)
