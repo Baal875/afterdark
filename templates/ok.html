@@ -80,9 +80,9 @@
       background: #4CAF50;
       color: #fff;
     }
-    /* Models Sidebar Grid (kept for reference or other uses) */
+    /* Models Sidebar Grid (hidden in this version) */
     #model-category {
-      display: none; /* hidden since we now use the full section view */
+      display: none;
     }
     .model-item {
       background: #222;
@@ -109,7 +109,7 @@
       padding: 20px;
       overflow-y: auto;
     }
-    /* Tabs (top of main-content) */
+    /* Tabs */
     .tabs {
       display: flex;
       justify-content: center;
@@ -146,9 +146,20 @@
     #model-gallery-container {
       display: none;
     }
-    /* New: Letter Model Container (for grid view of models in a letter category) */
+    /* Letter Model Container (for grid view of models in a letter category) */
     #letter-model-container {
       display: none;
+    }
+    /* Search input for models */
+    #model-search {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 15px;
+      border: 2px solid #444;
+      border-radius: 8px;
+      background: #1e1e1e;
+      color: #fff;
+      font-size: 1rem;
     }
     .grid {
       display: grid;
@@ -180,7 +191,7 @@
       display: none;
       margin-bottom: 10px;
     }
-    /* Debug Log (hidden by default) */
+    /* Debug Log */
     #debug-log {
       height: 250px;
       overflow: auto;
@@ -200,8 +211,11 @@
       background: #000;
       border-top: 2px solid #444;
     }
-    /* Responsive Adjustments */
+    /* Mobile Optimizations */
     @media (max-width: 768px) {
+      header h1 {
+        font-size: 2.5rem;
+      }
       .layout {
         flex-direction: column;
       }
@@ -209,6 +223,17 @@
         width: 100%;
         border-right: none;
         border-bottom: 2px solid #444;
+      }
+      .alphabet-letter {
+        font-size: 0.8rem;
+        padding: 4px 6px;
+      }
+      .tab {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+      }
+      #model-search {
+        font-size: 0.9rem;
       }
     }
   </style>
@@ -226,7 +251,7 @@
       <h2>Models</h2>
       <!-- Alphabetical Filter -->
       <div id="alphabet-filter" class="alphabet-filter"></div>
-      <!-- (Optional) You can keep a hidden sidebar grid if needed -->
+      <!-- (Hidden grid if needed) -->
       <div id="model-category"></div>
     </div>
 
@@ -309,7 +334,7 @@
 
       <!-- Container for Single Model Gallery -->
       <div id="model-gallery-container"></div>
-      <!-- Container for Letter Models (grid view of models starting with a letter) -->
+      <!-- Container for Letter Models (grid view with search) -->
       <div id="letter-model-container"></div>
 
       <!-- Debug Log -->
@@ -361,7 +386,6 @@
     const contents = document.querySelectorAll('.tab-content');
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
-        // Show tabs and tab content; hide letter model container if open.
         document.getElementById("letter-model-container").style.display = "none";
         document.getElementById("model-gallery-container").style.display = "none";
         document.querySelector('.tabs').style.display = "flex";
@@ -373,7 +397,7 @@
       });
     });
 
-    // Clear current selection and hide download button
+    // Clear selection
     function clearSelection() {
       selectedImages.clear();
       lastClickedIndex = null;
@@ -381,7 +405,7 @@
       document.getElementById("download-selected").style.display = "none";
     }
 
-    // Attach image selection listeners to images in a container
+    // Attach selection to images in a container
     function attachImageSelection(container) {
       currentGridImages = Array.from(container.querySelectorAll('.selectable-image'));
       currentGridImages.forEach((img, index) => {
@@ -428,7 +452,7 @@
       saveAs(content, "selected_images.zip");
     }
 
-    // --- UI Event Functions calling FastAPI endpoints ---
+    // --- API UI Event Functions ---
     async function searchEromeAlbums() {
       const username = document.getElementById("erome-albums-input").value.trim();
       const resultsDiv = document.getElementById("erome-albums-results");
@@ -466,7 +490,7 @@
           });
           resultsDiv.innerHTML = html;
           attachImageSelection(resultsDiv);
-          // Save model gallery in global object and update storage
+          // Save model gallery in storage
           modelGalleries[username] = data.images;
           saveModelGalleries();
         } else {
@@ -578,9 +602,7 @@
       }
     }
 
-    // --- Alphabetical Filter & Letter Models View ---
-
-    // Render the alphabetical filter in the sidebar.
+    // --- Alphabetical Filter & Letter Models View with Search ---
     function renderAlphabetFilter() {
       const container = document.getElementById("alphabet-filter");
       const letters = ["All","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
@@ -596,9 +618,9 @@
       });
     }
 
-    // Open a full section with grid view of models whose names start with the given letter.
+    // Open a full section with grid view of models (with search) filtered by letter.
     function openLetterModels(letter) {
-      // Hide tabs and other sections
+      // Hide tabs and other sections.
       document.querySelector('.tabs').style.display = "none";
       contents.forEach(c => c.style.display = "none");
       document.getElementById("model-gallery-container").style.display = "none";
@@ -607,9 +629,11 @@
       container.style.display = "block";
       let html = `<button class="btn" onclick="backToTabs()">Back</button>`;
       html += `<h2>Models starting with "${letter}"</h2>`;
-      html += `<div class="grid">`;
+      // Add a search input for models.
+      html += `<input type="text" id="model-search" placeholder="Search models..." onkeyup="filterModels('${letter}')">`;
+      html += `<div id="letter-model-grid" class="grid">`;
 
-      // Get models sorted alphabetically from our stored galleries.
+      // Get models sorted alphabetically.
       const models = Object.keys(modelGalleries).sort((a, b) => a.localeCompare(b));
       const filteredModels = letter === "All" ? models : models.filter(m => m.charAt(0).toUpperCase() === letter);
       if (filteredModels.length === 0) {
@@ -627,14 +651,37 @@
       container.innerHTML = html;
     }
 
-    // Open the selected model's gallery (from letter grid view)
+    // Filter models by search query within the letter group.
+    function filterModels(letter) {
+      const query = document.getElementById("model-search").value.toLowerCase();
+      const grid = document.getElementById("letter-model-grid");
+      // Get models sorted alphabetically.
+      const models = Object.keys(modelGalleries).sort((a, b) => a.localeCompare(b));
+      const filteredModels = models.filter(m => {
+        const matchLetter = letter === "All" ? true : m.charAt(0).toUpperCase() === letter;
+        return matchLetter && m.toLowerCase().includes(query);
+      });
+      let html = "";
+      if (filteredModels.length === 0) {
+        html = `<p>No models match your search.</p>`;
+      } else {
+        filteredModels.forEach(model => {
+          const thumbnail = modelGalleries[model][0] || '';
+          html += `<div class="grid-item" onclick="openModelGallery('${model}')">
+                    <img src="${thumbnail}" alt="${model} Thumbnail">
+                    <div>${model}</div>
+                   </div>`;
+        });
+      }
+      grid.innerHTML = html;
+    }
+
+    // Open the selected model's gallery.
     function openModelGallery(model) {
-      // Hide the letter model container and tabs.
       document.getElementById("letter-model-container").style.display = "none";
       document.querySelector('.tabs').style.display = "none";
       contents.forEach(c => c.style.display = "none");
-      
-      // Show the model gallery container and populate it with the model's images.
+
       const container = document.getElementById("model-gallery-container");
       container.style.display = "block";
       let html = `<button class="btn" onclick="backToTabs()">Back</button>`;
@@ -650,7 +697,7 @@
       attachImageSelection(container);
     }
 
-    // Return to tabs view from any full-screen model section.
+    // Return to the main tabs view.
     function backToTabs() {
       document.getElementById("letter-model-container").style.display = "none";
       document.getElementById("model-gallery-container").style.display = "none";
