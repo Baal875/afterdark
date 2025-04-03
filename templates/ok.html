@@ -38,6 +38,26 @@
       font-size: 1.1rem;
       color: #ccc;
     }
+    /* Fixed Stats Box */
+    #stats-box {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: #222;
+      border: 2px solid #444;
+      border-radius: 8px;
+      padding: 10px;
+      z-index: 1000;
+      font-size: 0.9rem;
+    }
+    .online-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: #4CAF50;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
     /* Main Layout */
     .layout {
       display: flex;
@@ -153,71 +173,19 @@
     .tab-content.active {
       display: block;
     }
-    /* Link Display Styles for Fetched Albums/Links */
-    .link-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 15px;
-      margin-top: 15px;
-    }
-    .link-item {
-      background: #222;
-      padding: 15px;
-      border-radius: 8px;
-      text-align: center;
-      transition: background 0.3s;
-    }
-    .link-item a {
-      color: #4CAF50;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    .link-item:hover {
-      background: #333;
-    }
-    /* Model Gallery & Letter Models Containers */
-    #model-gallery-container,
-    #letter-model-container {
-      display: none;
-    }
-    /* Admin Panel Section */
-    #admin-panel {
-      display: none;
-      padding: 20px;
-      background: #222;
-      border-radius: 8px;
-      margin-top: 20px;
-    }
-    #admin-panel h2 {
-      margin-top: 0;
-      color: #4CAF50;
-    }
-    .admin-form-group {
+    /* Input & Search Styles */
+    .input-group {
       margin-bottom: 15px;
     }
-    .admin-form-group label {
-      display: block;
-      margin-bottom: 5px;
-    }
-    .admin-form-group input {
+    .input-group input {
       width: 100%;
       padding: 8px;
+      margin-top: 5px;
       border: 2px solid #444;
       border-radius: 8px;
       background: #1e1e1e;
       color: #fff;
-    }
-    .btn {
-      padding: 10px 15px;
-      border: none;
-      border-radius: 4px;
-      background: #4CAF50;
-      color: #fff;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    .btn:hover {
-      background: #43a047;
+      font-size: 1rem;
     }
     /* Grid & Image Selection */
     .grid {
@@ -245,23 +213,25 @@
     .grid-item img.selected {
       box-shadow: 0 0 0 4px #4CAF50;
     }
+    /* Admin Controls (visible in admin mode) */
+    .admin-controls {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: rgba(0,0,0,0.7);
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: none;
+    }
+    .grid-item.admin .admin-controls {
+      display: block;
+    }
     /* Download Button */
     #download-selected {
       display: none;
       margin-bottom: 10px;
-    }
-    /* Stats Styles */
-    .stats {
-      margin-top: 20px;
-      font-size: 1.1rem;
-    }
-    .online-indicator {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      background: #4CAF50;
-      border-radius: 50%;
-      margin-right: 5px;
     }
     /* Debug Log */
     #debug-log {
@@ -304,13 +274,19 @@
         padding: 10px 15px;
         font-size: 0.9rem;
       }
-      #model-search {
+      .input-group input {
         font-size: 0.9rem;
       }
     }
   </style>
 </head>
 <body>
+  <!-- Fixed Stats Box -->
+  <div id="stats-box">
+    <div>Total Visits: <span id="total-visits">0</span></div>
+    <div><span class="online-indicator"></span>Online: <span id="online-users">0</span></div>
+  </div>
+
   <header>
     <h1>After Dark 🌙</h1>
     <img src="https://th.bing.com/th/id/R.90f1e6a7a300b6610b31b393c5b97704?rik=sqYPPWaZK5NEAg&riu=http%3a%2f%2fnsfwexchangecomic.cfw.me%2ffiles%2fmanialogos.png&ehk=ztf8eXTDb%2fiys6vd0LIfLdHhYypGHp4wLIOePUtuM0c%3d&risl=&pid=ImgRaw&r=0" alt="Logo" style="max-width: 100%; border-radius: 10px;">
@@ -342,7 +318,6 @@
         <div class="tab" data-tab="bunkr-albums">Bunkr Albums</div>
         <div class="tab" data-tab="bunkr-gallery">Bunkr Gallery</div>
         <div class="tab" data-tab="jpg5-gallery">JPG5 Gallery</div>
-        <div class="tab" data-tab="admin-panel" onclick="showAdminPanel(event)">Admin Panel</div>
       </div>
 
       <!-- Content Sections -->
@@ -409,30 +384,6 @@
         <div id="jpg5-gallery-results" style="margin-top:20px;" class="grid"></div>
       </div>
 
-      <!-- Admin Panel Content -->
-      <div id="admin-panel" class="tab-content">
-        <h2>Admin Panel</h2>
-        <!-- Update Model Thumbnail -->
-        <div class="admin-form-group">
-          <label for="model-name">Model Name:</label>
-          <input type="text" id="model-name" placeholder="Enter model name">
-        </div>
-        <div class="admin-form-group">
-          <label for="thumbnail-url">New Thumbnail URL:</label>
-          <input type="text" id="thumbnail-url" placeholder="Enter new thumbnail URL">
-        </div>
-        <button class="btn" onclick="updateThumbnail()">Update Thumbnail</button>
-        <hr>
-        <!-- Site Stats -->
-        <div class="stats">
-          <div>Total Visits: <span id="total-visits">0</span></div>
-          <div>
-            <span class="online-indicator"></span>
-            Currently Online: <span id="online-users">0</span>
-          </div>
-        </div>
-      </div>
-
       <!-- Container for Single Model Gallery -->
       <div id="model-gallery-container"></div>
       <!-- Container for Letter Models (grid view with search) -->
@@ -467,11 +418,32 @@
         alert("learn to code html yourself skid");
         location.reload();
       }
+      // Detect Ctrl+0 to trigger admin mode
+      if (e.ctrlKey && e.key === '0') {
+        enableAdminMode();
+      }
     };
-  </script>
-  
-  <!-- Existing Application Script -->
-  <script>
+
+    // Global admin mode flag
+    let isAdmin = false;
+
+    function enableAdminMode() {
+      if (!isAdmin) {
+        const pass = prompt("Enter admin password:");
+        if (pass === "cassidy") {
+          isAdmin = true;
+          alert("Admin mode enabled!");
+          // Optionally, add a visual cue (e.g. change header color)
+        } else {
+          alert("Incorrect password!");
+        }
+      } else {
+        // Disable admin mode if already enabled (optional toggle)
+        isAdmin = false;
+        alert("Admin mode disabled.");
+      }
+    }
+
     // API base URL – adjust if your FastAPI backend is hosted elsewhere.
     const API_BASE = "http://localhost:8000/api";
     let lastClickedIndex = null;
@@ -521,17 +493,15 @@
     const contents = document.querySelectorAll('.tab-content');
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
-        // Skip Admin Panel click here; it will be handled separately.
-        if (tab.getAttribute('data-tab') !== "admin-panel") {
-          document.getElementById("letter-model-container").style.display = "none";
-          document.getElementById("model-gallery-container").style.display = "none";
-          document.querySelector('.tabs').style.display = "flex";
-          contents.forEach(c => c.classList.remove('active'));
-          tabs.forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
-          clearSelection();
-        }
+        // Skip admin controls here; they are triggered via Ctrl+0.
+        document.getElementById("letter-model-container").style.display = "none";
+        document.getElementById("model-gallery-container").style.display = "none";
+        document.querySelector('.tabs').style.display = "flex";
+        contents.forEach(c => c.classList.remove('active'));
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
+        clearSelection();
       });
     });
 
@@ -748,50 +718,72 @@
       }
     }
 
-    // --- Admin Panel Functions ---
-    function showAdminPanel(e) {
-      // Prompt for password when clicking Admin Panel tab.
-      let pass = prompt("Enter admin password:");
-      if (pass === "cassidy") {
-        // Activate the admin panel tab.
-        tabs.forEach(t => t.classList.remove('active'));
-        e.target.classList.add('active');
-        contents.forEach(c => c.classList.remove('active'));
-        document.getElementById("admin-panel").classList.add('active');
-      } else {
-        alert("Incorrect password!");
-        // Prevent switching to the admin panel.
-        e.preventDefault();
+    // --- Admin Mode Functions ---
+    // In admin mode, add extra controls to model gallery views.
+    function addAdminControls(gridItem, modelName) {
+      // Create a small overlay button for editing.
+      const ctrlDiv = document.createElement('div');
+      ctrlDiv.className = 'admin-controls';
+      ctrlDiv.textContent = 'Edit';
+      ctrlDiv.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Offer choices: remove album or edit thumbnail.
+        const action = prompt("Enter 'remove' to delete the album or 'edit' to update the thumbnail:");
+        if (action === "remove") {
+          if (confirm(`Are you sure you want to remove the album "${modelName}"?`)) {
+            delete modelGalleries[modelName];
+            saveModelGalleries();
+            alert("Album removed.");
+            // Optionally, refresh the UI.
+            backToTabs();
+          }
+        } else if (action === "edit") {
+          const newThumb = prompt("Enter new thumbnail URL:");
+          if (newThumb) {
+            if (modelGalleries[modelName] && modelGalleries[modelName].length > 0) {
+              modelGalleries[modelName][0] = newThumb;
+              saveModelGalleries();
+              alert("Thumbnail updated.");
+              backToTabs();
+            } else {
+              alert("No images found for this model.");
+            }
+          }
+        }
+      });
+      gridItem.classList.add('admin');
+      gridItem.appendChild(ctrlDiv);
+    }
+
+    function openModelGallery(model) {
+      document.getElementById("letter-model-container").style.display = "none";
+      document.querySelector('.tabs').style.display = "none";
+      contents.forEach(c => c.style.display = "none");
+      const container = document.getElementById("model-gallery-container");
+      container.style.display = "block";
+      let html = `<button class="btn" onclick="backToTabs()">Back</button>`;
+      html += `<h2>${model}'s Gallery</h2>`;
+      html += `<div class="grid">`;
+      modelGalleries[model].forEach(url => {
+        html += `<div class="grid-item">
+                   <img src="${url}" data-url="${url}" class="selectable-image" alt="${model} Image">
+                 </div>`;
+      });
+      html += `</div>`;
+      container.innerHTML = html;
+      attachImageSelection(container);
+      // If admin mode is active, add controls to each grid item.
+      if (isAdmin) {
+        const gridItems = container.querySelectorAll('.grid-item');
+        gridItems.forEach(item => addAdminControls(item, model));
       }
     }
 
-    function updateThumbnail() {
-      const modelName = document.getElementById("model-name").value.trim();
-      const newThumbnail = document.getElementById("thumbnail-url").value.trim();
-      if (!modelName || !newThumbnail) {
-        alert("Please fill in both fields.");
-        return;
-      }
-      if (modelGalleries[modelName] && modelGalleries[modelName].length > 0) {
-        // Update the first image (thumbnail) in the gallery.
-        modelGalleries[modelName][0] = newThumbnail;
-        saveModelGalleries();
-        alert("Thumbnail updated!");
-        // Optionally, refresh any UI related to this model.
-      } else {
-        alert("Model not found in saved galleries.");
-      }
-    }
-
-    async function fetchStats() {
-      try {
-        const response = await fetch(`${API_BASE}/stats`);
-        const data = await response.json();
-        document.getElementById("total-visits").textContent = data.totalVisits || 0;
-        document.getElementById("online-users").textContent = data.onlineUsers || 0;
-      } catch (err) {
-        console.error("Error fetching stats:", err);
-      }
+    function backToTabs() {
+      document.getElementById("letter-model-container").style.display = "none";
+      document.getElementById("model-gallery-container").style.display = "none";
+      document.querySelector('.tabs').style.display = "flex";
+      contents.forEach(c => c.style.display = "");
     }
 
     // --- Alphabetical Filter & Letter Models View with Search ---
@@ -860,33 +852,6 @@
       grid.innerHTML = html;
     }
 
-    function openModelGallery(model) {
-      document.getElementById("letter-model-container").style.display = "none";
-      document.querySelector('.tabs').style.display = "none";
-      contents.forEach(c => c.style.display = "none");
-      const container = document.getElementById("model-gallery-container");
-      container.style.display = "block";
-      let html = `<button class="btn" onclick="backToTabs()">Back</button>`;
-      html += `<h2>${model}'s Gallery</h2>`;
-      html += `<div class="grid">`;
-      modelGalleries[model].forEach(url => {
-        html += `<div class="grid-item">
-                   <img src="${url}" data-url="${url}" class="selectable-image" alt="${model} Image">
-                 </div>`;
-      });
-      html += `</div>`;
-      container.innerHTML = html;
-      attachImageSelection(container);
-    }
-
-    function backToTabs() {
-      document.getElementById("letter-model-container").style.display = "none";
-      document.getElementById("model-gallery-container").style.display = "none";
-      document.querySelector('.tabs').style.display = "flex";
-      contents.forEach(c => c.style.display = "");
-    }
-
-    // NEW: Update the sidebar section for JPG5 albums
     function updateJPG5Sidebar() {
       const container = document.getElementById("saved-jpg5");
       container.innerHTML = "";
@@ -904,6 +869,17 @@
           });
           container.appendChild(div);
         });
+      }
+    }
+
+    async function fetchStats() {
+      try {
+        const response = await fetch(`${API_BASE}/stats`);
+        const data = await response.json();
+        document.getElementById("total-visits").textContent = data.totalVisits || 0;
+        document.getElementById("online-users").textContent = data.onlineUsers || 0;
+      } catch (err) {
+        console.error("Error fetching stats:", err);
       }
     }
   </script>
