@@ -346,6 +346,33 @@
     <p>&copy; 2025 After Dark. All rights reserved.</p>
   </footer>
 
+  <!-- Anti-View Source / Anti-Inspect Script -->
+  <script>
+    // Prevent right-click context menu
+    document.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      alert("learn to code html yourself skid");
+      location.reload();
+    });
+
+    // Prevent specific key combinations for viewing source or opening dev tools
+    document.onkeydown = function(e) {
+      // Disable Ctrl+U
+      if (e.ctrlKey && (e.key === 'u' || e.key === 'U')) {
+        e.preventDefault();
+        alert("learn to code html yourself skid");
+        location.reload();
+      }
+      // Disable F12 key (Dev Tools)
+      if (e.keyCode === 123) {
+        e.preventDefault();
+        alert("learn to code html yourself skid");
+        location.reload();
+      }
+    };
+  </script>
+  
+  <!-- Existing Application Script -->
   <script>
     // API base URL – adjust if your FastAPI backend is hosted elsewhere.
     const API_BASE = "http://localhost:8000/api";
@@ -620,7 +647,6 @@
 
     // Open a full section with grid view of models (with search) filtered by letter.
     function openLetterModels(letter) {
-      // Hide tabs and other sections.
       document.querySelector('.tabs').style.display = "none";
       contents.forEach(c => c.style.display = "none");
       document.getElementById("model-gallery-container").style.display = "none";
@@ -629,11 +655,9 @@
       container.style.display = "block";
       let html = `<button class="btn" onclick="backToTabs()">Back</button>`;
       html += `<h2>Models starting with "${letter}"</h2>`;
-      // Add a search input for models.
       html += `<input type="text" id="model-search" placeholder="Search models..." onkeyup="filterModels('${letter}')">`;
       html += `<div id="letter-model-grid" class="grid">`;
 
-      // Get models sorted alphabetically.
       const models = Object.keys(modelGalleries).sort((a, b) => a.localeCompare(b));
       const filteredModels = letter === "All" ? models : models.filter(m => m.charAt(0).toUpperCase() === letter);
       if (filteredModels.length === 0) {
@@ -655,7 +679,6 @@
     function filterModels(letter) {
       const query = document.getElementById("model-search").value.toLowerCase();
       const grid = document.getElementById("letter-model-grid");
-      // Get models sorted alphabetically.
       const models = Object.keys(modelGalleries).sort((a, b) => a.localeCompare(b));
       const filteredModels = models.filter(m => {
         const matchLetter = letter === "All" ? true : m.charAt(0).toUpperCase() === letter;
