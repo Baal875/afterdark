@@ -50,6 +50,23 @@ templates = Jinja2Templates(directory="templates")
 async def read_index(request: Request):
     return templates.TemplateResponse("ok.html", {"request": request})
 
+
+# Global stats variables
+total_visits = 0
+
+# For tracking active WebSocket connections
+active_connections = set()
+
+# ------------------- Stats Middleware ------------------- #
+class StatsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        global total_visits
+        total_visits += 1
+        response = await call_next(request)
+        return response
+
+app.add_middleware(StatsMiddleware)
+
 # ------------------- Helper Functions ------------------- #
 def parse_links_and_titles(page_content, pattern, title_class):
     soup = BeautifulSoup(page_content, 'html.parser')
@@ -335,10 +352,25 @@ async def get_jpg5_gallery(album_url: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ------------------- Stats Endpoint ------------------- #
 @app.get("/api/stats")
 async def get_stats():
+    # Online users count is now the count of active WebSocket connections
+    online_users = len(active_connections)
     return {"totalVisits": total_visits, "onlineUsers": online_users}
+
+# ------------------- WebSocket Endpoint for Live Online Count ------------------- #
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    active_connections.add(websocket)
+    try:
+        while True:
+            # Here you can implement ping/pong or wait for client messages if needed.
+            data = await websocket.receive_text()  # block until message is received
+            # Echo back (or you could simply ignore messages)
+            await websocket.send_text(f"Message received: {data}")
+    except WebSocketDisconnect:
+        active_connections.remove(websocket)
 
 def start():
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
