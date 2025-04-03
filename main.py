@@ -187,12 +187,14 @@ async def fetch_bunkr_gallery_images(username):
             for link in img_page_links:
                 tasks.append(get_image_url_from_link(link, session))
         results = await asyncio.gather(*tasks)
-        image_urls = [url for url in results if url is not None]
+        # Filter out None and any URLs containing "/thumb/" immediately.
+        image_urls = [url for url in results if url is not None and "/thumb/" not in url]
         # Validate each image URL with a HEAD request.
         validation_tasks = [validate_url(url, session) for url in image_urls]
         validated_results = await asyncio.gather(*validation_tasks)
-        validated_image_urls = [url for url in validated_results if url is not None]
-        return list({url for url in validated_image_urls if "/thumb/" not in url})
+        # Filter out invalid results and any that might include "/thumb/".
+        validated_image_urls = [url for url in validated_results if url is not None and "/thumb/" not in url]
+        return list({url for url in validated_image_urls})
 
 # ------------------- Fapello and JPG5 Functions (unchanged) ------------------- #
 
