@@ -183,51 +183,86 @@ async def fetch_bunkr_gallery_images(username):
 
 # ------------------- Fapello and JPG5 Functions (unchanged) ------------------- #
 
-async def fetch_fapello_page_media(page_url, session, username):
-    async with session.get(page_url) as response:
-        if response.status != 200:
-            return {"images": [], "videos": []}
-        text = await response.text()
-    soup = BeautifulSoup(text, 'html.parser')
-    page_images = [
-        img['src'] for img in soup.find_all('img', src=True)
-        if img['src'].startswith("https://fapello.com/content/") and f"/{username}/" in img['src']
-    ]
-    page_videos = [
-        vid['src'] for vid in soup.find_all('source', type="video/mp4", src=True)
-        if vid['src'].startswith("https://") and f"/{username}/" in vid['src']
-    ]
-    return {"images": page_images, "videos": page_videos}
-
-async def fetch_fapello_album_media(album_url):
-    media = {"images": [], "videos": []}
-    url_parts = album_url.split("/")
-    username = url_parts[0] if url_parts else ""
-    if not username:
-        return media
-    async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0"}) as session:
-        text, base_url, status = await get_webpage_content(album_url, session)
+async def fetch_fapello_page_media(page_url: str, session: aiohttp.ClientSession, username: str) -> dict:
+    """
+    Fetch media (images and videos) from a single Fapello page.
+    Only includes URLs containing the specified username.
+    """
+    try:
+        content, base_url, status = await get_webpage_content(page_url, session)
         if status != 200:
+            debug_log(f"[DEBUG] Failed to fetch {page_url} with status {status}")
+            return {"images": [], "videos": []}
+        soup = BeautifulSoup(content, 'html.parser')
+        # Collect images from <img> tags
+        image_tags = soup.find_all('img', src=True)
+        page_images = [
+            img['src']
+            for img in image_tags
+            if img['src'].startswith("https://fapello.com/content/") and f"/{username}/" in img['src']
+        ]
+        # Collect videos from <source> tags with type="video/mp4"
+        video_tags = soup.find_all('source', type="video/mp4", src=True)
+        page_videos = [
+            vid['src']
+            for vid in video_tags
+            if vid['src'].startswith("https://") and f"/{username}/" in vid['src']
+        ]
+        debug_log(f"[DEBUG] {page_url}: Found {len(page_images)} images and {len(page_videos)} videos for user {username}")
+        return {"images": page_images, "videos": page_videos}
+    except Exception as e:
+        debug_log(f"[DEBUG] Exception in fetching {page_url}: {e}")
+        return {"images": [], "videos": []}
+
+async def fetch_fapello_album_media(album_url: str) -> dict:
+    """
+    Fetches all media for a given Fapello album URL.
+    It extracts the username from the URL path and then retrieves all related pages.
+    """
+    media = {"images": [], "videos": []}
+
+    # Extract the username from the album URL.
+    parsed = urllib.parse.urlparse(album_url)
+    path_parts = parsed.path.strip("/").split("/")
+    if not path_parts:
+        debug_log("[DEBUG] Could not extract username from album URL.")
+        return media
+    username = path_parts[0]
+    
+    async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0"}) as session:
+        # Fetch main album page.
+        content, base_url, status = await get_webpage_content(album_url, session)
+        if status != 200:
+            debug_log(f"[DEBUG] Failed to fetch main album page: {album_url} (status {status})")
             return media
-        soup = BeautifulSoup(text, 'html.parser')
+
+        soup = BeautifulSoup(content, 'html.parser')
+        # Find album page links on the main page.
         links = []
         for a in soup.find_all('a', href=True):
             href = a['href']
+            # Only include links that start with the album URL and end with a number (page indicator)
             if href.startswith(album_url) and re.search(r'/\d+/?$', href):
                 links.append(href)
         links = list(set(links))
+        debug_log(f"[DEBUG] Found {len(links)} album pages from main page {album_url}")
+
+        # If no additional links were found, use the main album page.
         if not links:
             links = [album_url]
+
+        # Fetch media from all album pages concurrently.
         tasks = [fetch_fapello_page_media(link, session, username) for link in links]
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         for result in results:
             if isinstance(result, dict):
                 media["images"].extend(result.get("images", []))
                 media["videos"].extend(result.get("videos", []))
+        # Remove duplicates.
         media["images"] = list(set(media["images"]))
         media["videos"] = list(set(media["videos"]))
+        debug_log(f"[DEBUG] Total media collected for {username}: {len(media['images'])} images and {len(media['videos'])} videos")
         return media
-
 async def extract_jpg5_album_media_urls(album_url):
     media_urls = set()
     next_page_url = album_url.rstrip('/')
