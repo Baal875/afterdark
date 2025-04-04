@@ -287,6 +287,8 @@
     <div><span class="online-indicator"></span>Online: <span id="online-users">0</span></div>
   </div>
 
+</head>
+<body>
   <header>
     <h1>After Dark 🌙</h1>
     <img src="https://th.bing.com/th/id/R.90f1e6a7a300b6610b31b393c5b97704?rik=sqYPPWaZK5NEAg&riu=http%3a%2f%2fnsfwexchangecomic.cfw.me%2ffiles%2fmanialogos.png&ehk=ztf8eXTDb%2fiys6vd0LIfLdHhYypGHp4wLIOePUtuM0c%3d&risl=&pid=ImgRaw&r=0" alt="Logo" style="max-width: 100%; border-radius: 10px;">
@@ -312,15 +314,13 @@
       <button id="download-selected" class="btn" onclick="downloadSelectedImages()">Download Selected</button>
 
       <!-- Tabs -->
-      <div class="tabs">
-        <div class="tab active" data-tab="erome-albums">Erome Albums</div>
-        <div class="tab" data-tab="erome-gallery">Erome Gallery</div>
-        <div class="tab" data-tab="bunkr-albums">Bunkr Albums</div>
-        <div class="tab" data-tab="bunkr-gallery">Bunkr Gallery</div>
-        <div class="tab" data-tab="erome-url">Erome URL</div>
-        <div class="tab" data-tab="bunkr-url">Bunkr URL</div>
-        <div class="tab" data-tab="jpg5-gallery">JPG5 Gallery</div>
-      </div>
+        <div class="tabs">
+          <div class="tab active" data-tab="erome-albums">Erome Albums</div>
+          <div class="tab" data-tab="erome-gallery">Erome Gallery</div>
+          <div class="tab" data-tab="bunkr-albums">Bunkr Albums</div>
+          <div class="tab" data-tab="bunkr-gallery">Bunkr Gallery</div>
+          <div class="tab" data-tab="jpg5-gallery">JPG5 Gallery</div>
+       </div>
 
       <!-- Content Sections -->
       <div id="erome-albums" class="tab-content active">
@@ -365,24 +365,15 @@
         <div id="bunkr-gallery-results" style="margin-top:20px;" class="grid"></div>
       </div>
 
-      <div id="erome-url" class="tab-content">
-        <h2>Erome URL</h2>
+      <div id="fapello-gallery" class="tab-content">
+        <h2>Fapello Image Gallery</h2>
         <div class="input-group">
-          <label for="erome-url-input">Enter an Erome album URL:</label>
-          <input type="text" id="erome-url-input" placeholder="e.g., https://erome.com/album/...">
+          <label for="fapello-gallery-input">Enter a Fapello album URL:</label>
+          <input type="text" id="fapello-gallery-input" placeholder="e.g., https://fapello.com/emmaxbelle/">
         </div>
-        <button class="btn" onclick="fetchEromeURL()">Fetch Content</button>
-        <div id="erome-url-results" style="margin-top:20px;" class="grid"></div>
-      </div>
-
-      <div id="bunkr-url" class="tab-content">
-        <h2>Bunkr URL</h2>
-        <div class="input-group">
-          <label for="bunkr-url-input">Enter a Bunkr album URL:</label>
-          <input type="text" id="bunkr-url-input" placeholder="e.g., https://bunkr.com/album/...">
-        </div>
-        <button class="btn" onclick="fetchBunkrURL()">Fetch Content</button>
-        <div id="bunkr-url-results" style="margin-top:20px;" class="grid"></div>
+        <button class="btn" onclick="fetchFapelloGallery()">Fetch Media</button>
+        <div id="fapello-gallery-results" style="margin-top:20px;" class="grid"></div>
+        <div id="fapello-gallery-videos" style="margin-top:20px;"></div>
       </div>
 
       <div id="jpg5-gallery" class="tab-content">
@@ -408,8 +399,6 @@
   <footer>
     <p>&copy; 2025 After Dark. All rights reserved.</p>
   </footer>
-</body>
-</html>
 
   <!-- Anti-View Source / Anti-Inspect Script -->
   <script>
