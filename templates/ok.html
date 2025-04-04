@@ -884,10 +884,7 @@
       }
     }
     
-    // Update total visits every 10 seconds (adjust interval as needed)
-    setInterval(fetchStats, 10000);
-    fetchStats();
-
+  <script>
     // Set up WebSocket connection to update online user count in real time
     const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
@@ -899,7 +896,7 @@
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        document.getElementById("total-visits").textContent = data.totalVisits || 0;
+        // Only update the online user count
         document.getElementById("online-users").textContent = data.onlineUsers || 0;
       } catch (error) {
         console.error("Error parsing WebSocket data:", error);
