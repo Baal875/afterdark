@@ -2,6 +2,7 @@ import os
 import asyncio
 import aiohttp
 import re
+import json
 import urllib.parse
 import uvicorn
 from urllib.parse import urljoin
@@ -337,19 +338,35 @@ async def get_stats():
     online_users = len(active_connections)  # Count of active WebSocket connections
     return {"totalVisits": total_visits, "onlineUsers": online_users}
 
-# ------------------- WebSocket Endpoint for Live Online Count ------------------- #
+# ------------------- Real WebSocket Logic for Live Stats ------------------- #
+async def broadcast_stats():
+    """Broadcast the current stats to all connected WebSocket clients."""
+    stats = {"totalVisits": total_visits, "onlineUsers": len(active_connections)}
+    message = json.dumps(stats)
+    # Create a copy of active connections to avoid modification during iteration
+    for connection in list(active_connections):
+        try:
+            await connection.send_text(message)
+        except Exception:
+            active_connections.discard(connection)
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     active_connections.add(websocket)
+    # Broadcast updated stats when a client connects
+    await broadcast_stats()
     try:
         while True:
-            # Wait for messages (or you can implement a ping mechanism)
+            # Wait for a message from the client (e.g., a heartbeat or command)
             data = await websocket.receive_text()
-            # For demo, echo received message; alternatively trigger an update
-            await websocket.send_text(f"Message received: {data}")
+            # Here you can add command logic if needed.
+            # For now, we simply broadcast updated stats upon receiving any message.
+            await broadcast_stats()
     except WebSocketDisconnect:
         active_connections.remove(websocket)
+        # Broadcast updated stats when a client disconnects
+        await broadcast_stats()
 
 def start():
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
