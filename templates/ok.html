@@ -283,6 +283,7 @@
 <body>
   <!-- Fixed Stats Box -->
   <div id="stats-box">
+    <div>Total Visits: <span id="total-visits">0</span></div>
     <div><span class="online-indicator"></span>Online: <span id="online-users">0</span></div>
   </div>
 
@@ -884,7 +885,10 @@
       }
     }
     
-  <script>
+    // Update total visits every 10 seconds (adjust interval as needed)
+    setInterval(fetchStats, 10000);
+    fetchStats();
+
     // Set up WebSocket connection to update online user count in real time
     const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
@@ -896,7 +900,7 @@
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        // Only update the online user count
+        document.getElementById("total-visits").textContent = data.totalVisits || 0;
         document.getElementById("online-users").textContent = data.onlineUsers || 0;
       } catch (error) {
         console.error("Error parsing WebSocket data:", error);
