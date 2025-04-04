@@ -874,50 +874,56 @@
       }
     }
 
-    // Function to fetch and update total visits
-    async function fetchStats() {
-      try {
-        const response = await fetch(`${API_BASE}/api/stats`);
-        const data = await response.json();
-        document.getElementById("total-visits").textContent = data.totalVisits || 0;
-      } catch (err) {
-        console.error("Error fetching stats:", err);
-      }
+// Function to fetch and update total visits
+async function fetchStats() {
+  try {
+    const response = await fetch(`${API_BASE}/api/stats`);
+    const data = await response.json();
+    // Only update if a valid totalVisits is returned
+    if (data.totalVisits !== undefined) {
+      document.getElementById("total-visits").textContent = data.totalVisits;
     }
-    
-    // Update total visits every 10 seconds (adjust interval as needed)
-    setInterval(fetchStats, 10000);
-    fetchStats();
+  } catch (err) {
+    console.error("Error fetching stats:", err);
+  }
+}
 
-    // Set up WebSocket connection to update online user count in real time
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
+// Update total visits every 10 seconds (adjust interval as needed)
+setInterval(fetchStats, 10000);
+fetchStats();
 
-    ws.onopen = () => {
-      console.log("WebSocket connected.");
-    };
+// Set up WebSocket connection to update online user count in real time
+const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+const ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        document.getElementById("total-visits").textContent = data.totalVisits || 0;
-        document.getElementById("online-users").textContent = data.onlineUsers || 0;
-      } catch (error) {
-        console.error("Error parsing WebSocket data:", error);
-      }
-    };
+ws.onopen = () => {
+  console.log("WebSocket connected.");
+};
 
-    ws.onclose = () => {
-      console.log("WebSocket disconnected.");
-      document.getElementById("online-users").textContent = "0";
-    };
+ws.onmessage = (event) => {
+  try {
+    const data = JSON.parse(event.data);
+    // Only update total visits if provided in the WebSocket data
+    if (data.totalVisits !== undefined) {
+      document.getElementById("total-visits").textContent = data.totalVisits;
+    }
+    // Update online users count if provided
+    if (data.onlineUsers !== undefined) {
+      document.getElementById("online-users").textContent = data.onlineUsers;
+    }
+  } catch (error) {
+    console.error("Error parsing WebSocket data:", error);
+  }
+};
 
-    // Optionally, send a ping message every 30 seconds to keep the connection alive
-    setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send("ping");
-      }
-    }, 30000);
-  </script>
-</body>
-</html>
+ws.onclose = () => {
+  console.log("WebSocket disconnected.");
+  document.getElementById("online-users").textContent = "0";
+};
+
+// Optionally, send a ping message every 30 seconds to keep the connection alive
+setInterval(() => {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send("ping");
+  }
+}, 30000);
