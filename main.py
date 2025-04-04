@@ -318,11 +318,14 @@ async def get_bunkr_gallery(username: str):
 
 @app.get("/api/fapello-gallery")
 async def get_fapello_gallery(album_url: str):
+    if "fapello.com" not in album_url:
+        raise HTTPException(status_code=400, detail="Invalid album URL provided.")
     try:
         media = await fetch_fapello_album_media(album_url)
         return {"images": media.get("images", []), "videos": media.get("videos", [])}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"[DEBUG] Error in fapello-gallery: {e}")
+        raise HTTPException(status_code=500, detail="Error fetching Fapello media: " + str(e))
 
 @app.get("/api/jpg5-gallery")
 async def get_jpg5_gallery(album_url: str):
