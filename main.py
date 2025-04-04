@@ -221,12 +221,17 @@ async def fetch_fapello_album_media(album_url: str) -> dict:
     media = {"images": [], "videos": []}
     parsed = urllib.parse.urlparse(album_url)
     path_parts = parsed.path.strip("/").split("/")
-    if not path_parts:
+    if not path_parts or not path_parts[0]:
         print("[DEBUG] Could not extract username from album URL.")
         return media
     username = path_parts[0]
-    
-    async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0"}) as session:
+
+    async with aiohttp.ClientSession(
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Referer": album_url
+        }
+    ) as session:
         content, base_url, status = await get_webpage_content(album_url, session)
         if status != 200:
             print(f"[DEBUG] Failed to fetch main album page: {album_url} (status {status})")
@@ -236,11 +241,14 @@ async def fetch_fapello_album_media(album_url: str) -> dict:
         links = []
         for a in soup.find_all('a', href=True):
             href = a['href']
-            if href.startswith(album_url) and re.search(r'/\d+/?$', href):
-                links.append(href)
+            # If the href is relative, convert it to an absolute URL
+            full_href = urllib.parse.urljoin(base_url, href)
+            if full_href.startswith(album_url) and re.search(r'/\d+/?$', full_href):
+                links.append(full_href)
         links = list(set(links))
         print(f"[DEBUG] Found {len(links)} album pages from main page {album_url}")
 
+        # Use album_url if no sub-pages are found
         if not links:
             links = [album_url]
 
@@ -254,6 +262,7 @@ async def fetch_fapello_album_media(album_url: str) -> dict:
         media["videos"] = list(set(media["videos"]))
         print(f"[DEBUG] Total media collected for {username}: {len(media['images'])} images and {len(media['videos'])} videos")
         return media
+
 
 async def extract_jpg5_album_media_urls(album_url):
     media_urls = set()
