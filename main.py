@@ -194,17 +194,19 @@ async def fetch_bunkr_gallery_images(username):
 # ------------------- Fapello and JPG5 Functions ------------------- #
 async def fetch_fapello_page_media(page_url: str, session: aiohttp.ClientSession, username: str) -> dict:
     try:
+        # Use session.get with your headers already set in the ClientSession
         content, base_url, status = await get_webpage_content(page_url, session)
         if status != 200:
             print(f"[DEBUG] Failed to fetch {page_url} with status {status}")
             return {"images": [], "videos": []}
         soup = BeautifulSoup(content, 'html.parser')
-        image_tags = soup.find_all('img', src=True)
-        page_images = [
-            img['src']
-            for img in image_tags
-            if img['src'].startswith("https://fapello.com/content/") and f"/{username}/" in img['src']
-        ]
+        image_tags = soup.find_all('img')
+        page_images = []
+        for img in image_tags:
+            # Check both src and data-src attributes
+            img_url = img.get('src') or img.get('data-src')
+            if img_url and img_url.startswith("https://fapello.com/content/") and f"/{username}/" in img_url:
+                page_images.append(img_url)
         video_tags = soup.find_all('source', type="video/mp4", src=True)
         page_videos = [
             vid['src']
@@ -226,9 +228,10 @@ async def fetch_fapello_album_media(album_url: str) -> dict:
         return media
     username = path_parts[0]
 
+    # Create a session with custom headers
     async with aiohttp.ClientSession(
         headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
             "Referer": album_url
         }
     ) as session:
@@ -241,14 +244,12 @@ async def fetch_fapello_album_media(album_url: str) -> dict:
         links = []
         for a in soup.find_all('a', href=True):
             href = a['href']
-            # If the href is relative, convert it to an absolute URL
             full_href = urllib.parse.urljoin(base_url, href)
             if full_href.startswith(album_url) and re.search(r'/\d+/?$', full_href):
                 links.append(full_href)
         links = list(set(links))
         print(f"[DEBUG] Found {len(links)} album pages from main page {album_url}")
 
-        # Use album_url if no sub-pages are found
         if not links:
             links = [album_url]
 
@@ -262,6 +263,7 @@ async def fetch_fapello_album_media(album_url: str) -> dict:
         media["videos"] = list(set(media["videos"]))
         print(f"[DEBUG] Total media collected for {username}: {len(media['images'])} images and {len(media['videos'])} videos")
         return media
+
 
 
 async def extract_jpg5_album_media_urls(album_url):
