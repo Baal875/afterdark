@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>After Dark 🌙</title>
   <link rel="icon" href="https://th.bing.com/th/id/R.90f1e6a7a300b6610b31b393c5b97704?rik=sqYPPWaZK5NEAg&riu=http%3a%2f%2fnsfwexchangecomic.cfw.me%2ffiles%2fmanialogos.png&ehk=ztf8eXTDb%2fiys6vd0LIfLdHhYypGHp4wLIOePUtuM0c%3d&risl=&pid=ImgRaw&r=0">
-  <!-- JSZip & FileSaver for downloads -->
+  <!-- JSZip & FileSaver for ZIP handling and downloads -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
-    /* Palette: navy (#0a192f), deep (#112240), accent (#64ffda), text (#ccd6f6) */
+    /* Palette & basics */
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
@@ -20,7 +20,7 @@
     }
     @keyframes gradientBG {
       0%,100% { background: linear-gradient(135deg, #0a192f, #020c1b); }
-      50%  { background: linear-gradient(135deg, #112240, #020c1b); }
+      50% { background: linear-gradient(135deg, #112240, #020c1b); }
     }
     header {
       text-align: center;
@@ -43,42 +43,81 @@
       margin-top: 10px;
     }
 
+    /* Stats box */
     #stats-box {
-      position: fixed; top:10px; right:10px;
+      position: fixed;
+      top: 10px; right: 10px;
       background: rgba(10,25,47,0.9);
-      border:2px solid #233554; border-radius:8px;
-      padding:10px; font-size:0.9rem; backdrop-filter:blur(4px);
+      border: 2px solid #233554;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.9rem;
+      backdrop-filter: blur(4px);
     }
     .online-indicator {
-      display:inline-block;width:10px;height:10px;
-      background:#64ffda;border-radius:50%;margin-right:5px;
+      display: inline-block;
+      width: 10px; height: 10px;
+      background: #64ffda;
+      border-radius: 50%;
+      margin-right: 5px;
     }
 
-    /* Models & Alphabet Filter (under header) */
+    /* Models & Albums always visible */
     #models-container {
-      background: #112240; padding:15px;
-      border-bottom:2px solid #233554; text-align:center;
+      background: #112240;
+      padding: 15px;
+      border-bottom: 2px solid #233554;
+      text-align: center;
     }
     #models-container h2 {
-      color:#64ffda; font-size:1.5rem; margin-bottom:10px;
+      color: #64ffda;
+      font-size: 1.5rem;
+      margin-bottom: 10px;
     }
     .alphabet-filter {
-      display:inline-flex; flex-wrap:wrap; justify-content:center;
+      display: inline-flex;
+      flex-wrap: wrap;
+      justify-content: center;
     }
     .alphabet-letter {
-      margin:2px; padding:5px 8px;
-      background:#112240; color:#ccd6f6;
-      border-radius:4px; cursor:pointer;
-      transition:background .3s, transform .3s;
+      margin: 2px;
+      padding: 5px 8px;
+      background: #112240;
+      color: #ccd6f6;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
     }
-    .alphabet-letter:hover { background:#233554; transform:translateY(-2px); }
+    .alphabet-letter:hover {
+      background: #233554;
+      transform: translateY(-2px);
+    }
     .alphabet-letter.active {
-      background:#64ffda; color:#0a192f;
+      background: #64ffda;
+      color: #0a192f;
     }
 
-    /* Model-search input */
-    #model-search {
-      display:none;
+    /* Admin upload form (hidden unless admin) */
+    #admin-upload {
+      display: none;
+      margin-top: 15px;
+      text-align: center;
+    }
+    #new-model-name {
+      width: 40%;
+      padding: 10px 14px;
+      background: #112240;
+      color: #ccd6f6;
+      border: 2px solid #233554;
+      border-radius: 20px;
+      margin-right: 8px;
+    }
+    #new-model-zip {
+      margin-right: 8px;
+    }
+
+    /* Search within models */
+    #normal-model-search {
       width: 80%;
       padding: 12px 16px;
       background: #112240;
@@ -86,35 +125,54 @@
       border: 2px solid #233554;
       border-radius: 20px;
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
-      transition: border-color 0.3s, box-shadow 0.3s;
       margin-bottom: 15px;
     }
-    #model-search:focus {
+    #normal-model-search:focus {
       border-color: #64ffda;
       outline: none;
       box-shadow: 0 0 8px rgba(100,255,218,0.5);
     }
 
-    /* JPG5 box in bottom-right */
+    /* Show JPG5 button margin */
+    #toggle-jpg5-btn {
+      margin-top: 20px;
+    }
+
+    /* JPG5 sidebar */
     #saved-jpg5 {
-      position:fixed; bottom:10px; right:10px;
-      width:200px; background:rgba(10,25,47,0.9);
-      border:2px solid #233554; border-radius:8px;
-      padding:10px; box-shadow:0 2px 8px rgba(0,0,0,0.7);
-      z-index:1000;
+      position: fixed;
+      bottom: 10px; right: 10px;
+      width: 200px;
+      background: rgba(10,25,47,0.9);
+      border: 2px solid #233554;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.7);
+      z-index: 1000;
     }
     #saved-jpg5 .model-item {
-      display:inline-block; margin:4px; padding:2px;
-      cursor:pointer; transition:transform .3s;
+      display: inline-block;
+      margin: 4px;
+      padding: 2px;
+      cursor: pointer;
+      transition: transform 0.3s;
     }
     #saved-jpg5 .model-item img {
-      width:50px; height:50px;
-      object-fit:cover; border-radius:4px;
-      display:block;
+      width: 50px; height: 50px;
+      object-fit: cover;
+      border-radius: 4px;
+      display: block;
     }
-    #saved-jpg5 .model-item:hover { transform:scale(1.05); }
+    #saved-jpg5 .model-item div {
+      font-size: 0.7rem;
+      color: #ccd6f6;
+      text-align: center;
+    }
+    #saved-jpg5 .model-item:hover {
+      transform: scale(1.05);
+    }
 
-    /* Custom image context menu */
+    /* Context menu */
     #img-context-menu {
       position: fixed;
       background: #112240;
@@ -134,138 +192,209 @@
       background: #233554;
     }
 
-    /* Main layout & tabs */
-    .layout { display:flex; flex-direction:column; padding:20px; }
+    /* Layout & tabs */
+    .layout {
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
     .tabs {
-      display:flex; justify-content:center;
-      background:#112240; border-bottom:2px solid #233554;
-      box-shadow:0 2px 5px rgba(0,0,0,0.5); margin-bottom:20px;
+      display: flex;
+      justify-content: center;
+      background: #112240;
+      border-bottom: 2px solid #233554;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      margin-bottom: 20px;
     }
     .tab {
-      padding:12px 20px; margin:0 5px;
-      background:#112240; color:#ccd6f6;
-      border-top-left-radius:6px; border-top-right-radius:6px;
-      cursor:pointer; transition:background .3s;
+      padding: 12px 20px;
+      margin: 0 5px;
+      background: #112240;
+      color: #ccd6f6;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s;
     }
-    .tab:hover { background:#233554; }
+    .tab:hover {
+      background: #233554;
+    }
     .tab.active {
-      background:#64ffda; color:#0a192f; font-weight:bold;
+      background: #64ffda;
+      color: #0a192f;
+      font-weight: bold;
     }
-
     .tab-content {
-      display:none; padding:20px;
-      animation:fadeIn .5s ease-in-out;
+      display: none;
+      padding: 20px;
+      animation: fadeIn 0.5s ease-in-out;
     }
-    .tab-content.active { display:block; }
+    .tab-content.active {
+      display: block;
+    }
 
     /* Inputs & buttons */
-    .input-group { text-align:center; margin-bottom:15px; }
+    .input-group {
+      text-align: center;
+      margin-bottom: 15px;
+    }
     .input-group input {
-      width:80%; padding:12px 16px;
-      background:#112240; color:#ccd6f6;
-      border:2px solid #233554; border-radius:20px;
-      box-shadow:inset 0 2px 4px rgba(0,0,0,0.3);
-      transition:border-color .3s, box-shadow .3s;
+      width: 80%;
+      padding: 12px 16px;
+      background: #112240;
+      color: #ccd6f6;
+      border: 2px solid #233554;
+      border-radius: 20px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+      transition: border-color 0.3s, box-shadow 0.3s;
     }
     .input-group input:focus {
-      border-color:#64ffda; outline:none;
-      box-shadow:0 0 8px rgba(100,255,218,0.5);
+      border-color: #64ffda;
+      outline: none;
+      box-shadow: 0 0 8px rgba(100,255,218,0.5);
     }
     .btn {
-      background:#64ffda; color:#0a192f;
-      padding:8px 16px; border:none; border-radius:6px;
-      cursor:pointer; transition:background .3s, transform .2s;
+      background: #64ffda;
+      color: #0a192f;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
     }
     .btn:hover {
-      background:#52e0b8; transform:translateY(-2px);
+      background: #52e0b8;
+      transform: translateY(-2px);
     }
 
-    /* Admin buttons */
+    /* Admin remove/edit buttons */
     .admin-btn {
-      background:#64ffda; color:#0a192f;
-      padding:4px 8px; margin:4px;
-      border:none; border-radius:6px;
-      font-size:0.8rem; cursor:pointer;
-      transition:background .3s;
+      background: #64ffda;
+      color: #0a192f;
+      padding: 4px 8px;
+      margin: 4px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.3s;
     }
-    .admin-btn:hover { background:#52e0b8; }
+    .admin-btn:hover {
+      background: #52e0b8;
+    }
 
-    /* Success message */
+    /* Feedback & overlay */
     #admin-feedback {
-      position:fixed; bottom:20px; left:50%;
-      transform:translateX(-50%);
-      background:#64ffda; color:#0a192f;
-      padding:10px 20px; border-radius:6px;
-      box-shadow:0 2px 8px rgba(0,0,0,0.5);
-      opacity:0; transition:opacity .5s;
-      z-index:10001;
+      position: fixed;
+      bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      background: #64ffda;
+      color: #0a192f;
+      padding: 10px 20px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      opacity: 0;
+      transition: opacity 0.5s;
+      z-index: 10001;
     }
-    #admin-feedback.show { opacity:1; }
-
-    /* Image grid */
-    .grid {
-      display:grid; gap:15px;
-      grid-template-columns:repeat(auto-fill, minmax(220px,1fr));
+    #admin-feedback.show {
+      opacity: 1;
     }
-    .grid-item {
-      position:relative;
-      background:#112240; border-radius:8px;
-      overflow:hidden; transition:transform .3s;
-    }
-    .grid-item:hover { transform:translateY(-4px); }
-    .grid-item img {
-      width:100%; display:block;
-      cursor:pointer; transition:transform .2s, box-shadow .2s;
-    }
-    .grid-item img:hover { transform:scale(1.02); }
-    .grid-item img.selected {
-      box-shadow:0 0 0 4px #64ffda;
-    }
-    .delete-btn {
-      position:absolute; top:8px; right:8px;
-      background:rgba(255,0,0,0.8); color:#fff;
-      border:none; border-radius:50%;
-      width:24px; height:24px;
-      font-size:16px; line-height:24px;
-      text-align:center; cursor:pointer;
-    }
-
-    /* Debug log */
-    #debug-log {
-      display:none; margin-top:20px;
-      background:linear-gradient(135deg, #112240, #233554);
-      color:#ccd6f6; font-family:monospace;
-      border:2px solid #64ffda; border-radius:6px;
-      padding:10px; height:200px; overflow:auto;
-    }
-
-    /* Footer */
-    footer {
-      text-align:center; padding:10px;
-      background:rgba(10,25,47,0.9);
-      border-top:2px solid #233554;
-    }
-
-    /* Anti‑inspect overlay */
     #overlay-message {
-      position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(10,25,47,0.95); color:#ccd6f6;
-      display:flex; align-items:center; justify-content:center;
-      font-size:2rem; text-align:center;
-      opacity:0; pointer-events:none; transition:opacity .5s;
-      z-index:10000;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(10,25,47,0.95);
+      color: #ccd6f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+      z-index: 10000;
     }
     #overlay-message.show {
-      opacity:1; pointer-events:auto;
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .fade-out {
+      animation: fadeOutMessage 1.5s forwards;
     }
     @keyframes fadeOutMessage {
-      to { opacity:0; transform:translateY(-20px); }
+      to {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
     }
-    .fade-out { animation:fadeOutMessage 1.5s forwards; }
 
-    @media (max-width:768px) {
-      .input-group input, #model-search { width:90%; }
-      .tab { padding:8px 12px; font-size:.9rem; }
+    /* Grid & items */
+    .grid {
+      display: grid;
+      gap: 15px;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+    .grid-item {
+      position: relative;
+      background: #112240;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform 0.3s;
+    }
+    .grid-item:hover {
+      transform: translateY(-4px);
+    }
+    .grid-item img {
+      width: 100%;
+      display: block;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .grid-item img:hover {
+      transform: scale(1.02);
+    }
+    .grid-item img.selected {
+      box-shadow: 0 0 0 4px #64ffda;
+    }
+    .delete-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: rgba(255,0,0,0.8);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 24px; height: 24px;
+      font-size: 16px; line-height: 24px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    /* Model name under thumbnail */
+    .model-name {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #64ffda;
+      word-break: break-word;
+    }
+
+    footer {
+      text-align: center;
+      padding: 10px;
+      background: rgba(10,25,47,0.9);
+      border-top: 2px solid #233554;
+    }
+    @media (max-width: 768px) {
+      .input-group input, #normal-model-search, #new-model-name {
+        width: 90%;
+      }
+      .tab {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+      }
     }
   </style>
 </head>
@@ -288,16 +417,25 @@
     <p>Select a tab to start exploring content.</p>
   </header>
 
+  <!-- Always visible Models & Albums -->
   <div id="models-container">
     <h2>Models & Albums</h2>
-    <input type="text" id="model-search" placeholder="Search models…" />
     <div id="alphabet-filter" class="alphabet-filter"></div>
+    <!-- Admin upload UI -->
+    <div id="admin-upload">
+      <input type="text" id="new-model-name" placeholder="New model name" />
+      <input type="file" id="new-model-zip" accept=".zip" />
+      <button class="btn" onclick="uploadNewModel()">Upload Model</button>
+    </div>
   </div>
 
   <div id="saved-jpg5"></div>
 
   <div class="layout">
-    <button id="download-selected" class="btn" onclick="downloadSelectedImages()" style="display:none;">Download Selected</button>
+    <button id="download-selected" class="btn" onclick="downloadSelectedImages()" style="display:none;">
+      Download Selected
+    </button>
+
     <div class="tabs">
       <div class="tab active" data-tab="erome-albums">Erome Albums</div>
       <div class="tab" data-tab="erome-gallery">Erome Gallery</div>
@@ -309,7 +447,7 @@
     <div id="erome-albums" class="tab-content active">
       <h2>Search Erome Albums</h2>
       <div class="input-group">
-        <input type="text" id="erome-albums-input" placeholder="Enter username…">
+        <input type="text" id="erome-albums-input" placeholder="Enter username…" />
       </div>
       <button class="btn" onclick="searchEromeAlbums()">Search Albums</button>
       <div id="erome-albums-results"></div>
@@ -318,7 +456,7 @@
     <div id="erome-gallery" class="tab-content">
       <h2>Erome Gallery</h2>
       <div class="input-group">
-        <input type="text" id="erome-gallery-input" placeholder="Enter username…">
+        <input type="text" id="erome-gallery-input" placeholder="Enter username…" />
       </div>
       <button class="btn" onclick="fetchEromeGallery()">Fetch Images</button>
       <div id="erome-gallery-results" class="grid"></div>
@@ -327,7 +465,7 @@
     <div id="bunkr-albums" class="tab-content">
       <h2>Bunkr Links</h2>
       <div class="input-group">
-        <input type="text" id="bunkr-albums-input" placeholder="Enter username…">
+        <input type="text" id="bunkr-albums-input" placeholder="Enter username…" />
       </div>
       <button class="btn" onclick="searchBunkrLinks()">Search Links</button>
       <div id="bunkr-albums-results"></div>
@@ -336,7 +474,7 @@
     <div id="bunkr-gallery" class="tab-content">
       <h2>Bunkr Gallery</h2>
       <div class="input-group">
-        <input type="text" id="bunkr-gallery-input" placeholder="Enter username…">
+        <input type="text" id="bunkr-gallery-input" placeholder="Enter username…" />
       </div>
       <button class="btn" onclick="fetchBunkrGallery()">Fetch Images</button>
       <div id="bunkr-gallery-results" class="grid"></div>
@@ -345,14 +483,14 @@
     <div id="jpg5-gallery" class="tab-content">
       <h2>JPG5 Gallery</h2>
       <div class="input-group">
-        <input type="text" id="jpg5-gallery-input" placeholder="Enter album URL…">
+        <input type="text" id="jpg5-gallery-input" placeholder="Enter album URL…" />
       </div>
       <button class="btn" onclick="fetchJPG5Gallery()">Fetch Images</button>
       <div id="jpg5-gallery-results" class="grid"></div>
     </div>
 
-    <div id="model-gallery-container" style="display:none;"></div>
     <div id="letter-model-container" style="display:none;"></div>
+    <div id="model-gallery-container" style="display:none;"></div>
     <div id="debug-log"></div>
   </div>
 
@@ -368,8 +506,12 @@
     let lastClicked = null;
     let currentGridImages = [];
     let selectedImages = new Set();
+    let currentLetter = "All";
 
-    // On load: restore state
+    const tabs = document.querySelectorAll('.tab');
+    const contents = document.querySelectorAll('.tab-content');
+
+    // On load: restore state, render filter & sidebar, start stats
     window.onload = () => {
       const mg = localStorage.getItem('modelGalleries');
       if (mg) modelGalleries = JSON.parse(mg);
@@ -381,118 +523,108 @@
       setInterval(fetchStats, 10000);
     };
 
+    // Admin toggle (Ctrl+0) and anti-inspect
+    document.onkeydown = e => {
+      if (e.ctrlKey && e.key === '0') {
+        e.preventDefault();
+        const pw = prompt("Admin password:");
+        if (pw === "cassidy") {
+          isAdmin = !isAdmin;
+          showAdminFeedback(isAdmin ? "Admin mode enabled!" : "Admin mode disabled.");
+          document.getElementById('admin-upload').style.display = isAdmin ? 'block' : 'none';
+          openLetterModels(currentLetter);
+        } else {
+          showAdminFeedback("Incorrect password!");
+        }
+      }
+      if ((e.ctrlKey && /[uU]/.test(e.key)) || e.keyCode === 123) {
+        e.preventDefault();
+        showOverlayMessage("Learn to code HTML yourself, skid");
+      }
+    };
+
     function showAdminFeedback(msg) {
       const fb = document.getElementById('admin-feedback');
       fb.textContent = msg;
       fb.classList.add('show');
       setTimeout(() => fb.classList.remove('show'), 2000);
     }
-
     function showOverlayMessage(msg) {
       const ov = document.getElementById("overlay-message");
       ov.textContent = msg;
       ov.classList.add("show");
       setTimeout(() => ov.classList.add("fade-out"), 1000);
       setTimeout(() => {
-        ov.classList.remove("show", "fade-out");
+        ov.classList.remove("show","fade-out");
         ov.textContent = "";
       }, 2500);
     }
 
-    document.addEventListener('contextmenu', e => {
-      const img = e.target.closest('img');
-      if (img) {
-        e.preventDefault();
-        showImageContextMenu(e, img);
+    // Stats: REST + WebSocket
+    async function fetchStats() {
+      try {
+        const res = await fetch(`${API_BASE}/api/stats`);
+        const d = await res.json();
+        if (d.totalVisits !== undefined) {
+          document.getElementById("total-visits").textContent = d.totalVisits;
+        }
+      } catch (err) {
+        console.error("Error fetching stats:", err);
       }
-    });
-
-    // Image context menu
-    const menu = document.getElementById('img-context-menu');
-    let currentImg = null;
-    function showImageContextMenu(e, img) {
-      currentImg = img;
-      menu.style.top = e.clientY + 'px';
-      menu.style.left = e.clientX + 'px';
-      menu.style.display = 'block';
     }
-    document.addEventListener('click', () => menu.style.display = 'none');
-    menu.addEventListener('click', async e => {
-      const action = e.target.dataset.action;
-      if (!currentImg) return;
-      const url = currentImg.src;
-      if (action === 'copy-image') {
-        try {
-          const blob = await fetch(url).then(r => r.blob());
-          await navigator.clipboard.write([
-            new ClipboardItem({ [blob.type]: blob })
-          ]);
-        } catch {}
-      } else if (action === 'copy-url') {
-        navigator.clipboard.writeText(url).catch(()=>{});
-      } else if (action === 'open') {
-        window.open(url, '_blank');
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
+    ws.onopen = () => console.log("WebSocket connected.");
+    ws.onmessage = e => {
+      try {
+        const d = JSON.parse(e.data);
+        if (d.totalVisits !== undefined) {
+          document.getElementById("total-visits").textContent = d.totalVisits;
+        }
+        if (d.onlineUsers !== undefined) {
+          document.getElementById("online-users").textContent = d.onlineUsers;
+        }
+      } catch (err) {
+        console.error("Error parsing WebSocket data:", err);
       }
-      menu.style.display = 'none';
-    });
-
-    // Admin toggle
-    document.onkeydown = e => {
-      if (e.ctrlKey && /[uU]/.test(e.key)) {
-        e.preventDefault();
-        showOverlayMessage("Learn to code HTML yourself, skid");
-      }
-      if (e.keyCode === 123) {
-        e.preventDefault();
-        showOverlayMessage("Learn to code HTML yourself, skid");
-      }
-      if (e.ctrlKey && e.key === '0') enableAdminMode();
     };
-    function enableAdminMode() {
-      const pw = prompt("Admin password:");
-      if (pw === "cassidy") {
-        isAdmin = !isAdmin;
-        showAdminFeedback(isAdmin ? "Admin mode enabled!" : "Admin mode disabled.");
-      } else {
-        showAdminFeedback("Incorrect password!");
-      }
-    }
+    ws.onclose = () => {
+      console.log("WebSocket disconnected.");
+      document.getElementById("online-users").textContent = "0";
+    };
+    setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) ws.send("ping");
+    }, 30000);
 
+    // Persist
     function saveState() {
       localStorage.setItem('modelGalleries', JSON.stringify(modelGalleries));
       localStorage.setItem('savedJPG5Urls', JSON.stringify(savedJPG5Urls));
     }
-
     function mergeGallery(orig, imgs) {
       if (!orig) return imgs;
       imgs.forEach(u => { if (!orig.includes(u)) orig.push(u); });
       return orig;
     }
 
-    // Tabs
-    const tabs = document.querySelectorAll('.tab'),
-          contents = document.querySelectorAll('.tab-content');
-    tabs.forEach(t => {
-      t.onclick = () => {
-        contents.forEach(c => c.classList.remove('active'));
-        tabs.forEach(x => x.classList.remove('active'));
-        t.classList.add('active');
-        document.getElementById(t.dataset.tab).classList.add('active');
-        clearSelection();
-        document.getElementById('model-search').style.display =
-          ['erome-gallery','bunkr-gallery','jpg5-gallery'].includes(t.dataset.tab) ? 'none' : 'block';
-      };
+    // Tabs navigation
+    tabs.forEach(t => t.onclick = () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      contents.forEach(c => c.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById(t.dataset.tab).classList.add('active');
+      clearSelection();
     });
 
+    // Image selection & download
     function clearSelection() {
       selectedImages.clear();
       lastClicked = null;
       currentGridImages.forEach(i => i.classList.remove('selected'));
       document.getElementById("download-selected").style.display = "none";
     }
-
     document.addEventListener('keydown', e => {
-      if (e.shiftKey && (e.key==='a'||e.key==='A')) selectAllImages();
+      if (e.shiftKey && (e.key === 'a' || e.key === 'A')) selectAllImages();
     });
     function selectAllImages() {
       currentGridImages.forEach(img => {
@@ -501,20 +633,17 @@
       });
       document.getElementById("download-selected").style.display = "block";
     }
-
     function attachImageSelection(container) {
       currentGridImages = Array.from(container.querySelectorAll('.selectable-image'));
       currentGridImages.forEach((img, i) => {
-        // admin-only delete
         if (isAdmin) {
           const parent = img.closest('.grid-item');
-          let del = parent.querySelector('.delete-btn');
-          if (!del) {
-            del = document.createElement('button');
-            del.textContent = '×';
-            del.className = 'delete-btn';
-            parent.appendChild(del);
-            del.addEventListener('click', e => {
+          if (!parent.querySelector('.delete-btn')) {
+            const d = document.createElement('button');
+            d.textContent = '×';
+            d.className = 'delete-btn';
+            parent.appendChild(d);
+            d.onclick = e => {
               e.stopPropagation();
               if (confirm('Remove this image?')) {
                 const url = img.dataset.url;
@@ -525,12 +654,12 @@
                 parent.remove();
                 showAdminFeedback('Image removed');
               }
-            });
+            };
           }
         }
-        img.addEventListener('click', e => {
+        img.onclick = e => {
           if (e.shiftKey && lastClicked !== null) {
-            const [s,eI] = [Math.min(lastClicked,i), Math.max(lastClicked,i)];
+            const [s,eI] = [Math.min(lastClicked,i),Math.max(lastClicked,i)];
             for (let j=s; j<=eI; j++) {
               currentGridImages[j].classList.add('selected');
               selectedImages.add(currentGridImages[j].dataset.url);
@@ -544,22 +673,23 @@
             lastClicked = i;
           }
           document.getElementById("download-selected").style.display = selectedImages.size ? "block":"none";
-        });
+        };
       });
     }
-
     async function downloadSelectedImages() {
       if (!selectedImages.size) return;
       const zip = new JSZip(), fld = zip.folder("after_dark_images"), urls = [...selectedImages];
       for (let i=0; i<urls.length; i++) {
         try {
-          const res = await fetch(urls[i]), blob = await res.blob(),
+          const r = await fetch(urls[i]), b = await r.blob(),
                 ext = urls[i].split('.').pop().split('?')[0];
-          fld.file(`image_${i}.${ext}`, blob);
-        } catch(err) { console.error(err); }
+          fld.file(`image_${i}.${ext}`, b);
+        } catch(err) {
+          console.error(err);
+        }
       }
       const blob = await zip.generateAsync({type:"blob"});
-      saveAs(blob,"selected_images.zip");
+      saveAs(blob, "selected_images.zip");
     }
 
     // Erome Albums
@@ -577,8 +707,12 @@
                  <a href="${l}" target="_blank">${l}</a>
                  ${isAdmin?`<button class="admin-btn" onclick="removeAlbum('${l}')">Remove</button>`:''}
                </div>`).join('');
-        } else rd.textContent = `No albums for ${u}.`;
-      } catch(e) { rd.textContent = `Error: ${e}`; }
+        } else {
+          rd.textContent = `No albums for ${u}.`;
+        }
+      } catch(e) {
+        rd.textContent = `Error: ${e}`;
+      }
     }
     function removeAlbum(url) {
       if (!confirm(`Remove album ${url}?`)) return;
@@ -609,8 +743,12 @@
           attachImageSelection(rd);
           modelGalleries[u] = mergeGallery(modelGalleries[u], js.images);
           saveState();
-        } else rd.textContent = `No images for ${u}.`;
-      } catch(e) { rd.textContent = `Error: ${e}`; }
+        } else {
+          rd.textContent = `No images for ${u}.`;
+        }
+      } catch(e) {
+        rd.textContent = `Error: ${e}`;
+      }
     }
 
     // Bunkr Albums
@@ -628,8 +766,12 @@
                  <a href="${l}" target="_blank">${l}</a>
                  ${isAdmin?`<button class="admin-btn" onclick="removeAlbum('${l}')">Remove</button>`:''}
                </div>`).join('');
-        } else rd.textContent = `No links for ${u}.`;
-      } catch(e) { rd.textContent = `Error: ${e}`; }
+        } else {
+          rd.textContent = `No links for ${u}.`;
+        }
+      } catch(e) {
+        rd.textContent = `Error: ${e}`;
+      }
     }
 
     // Bunkr Gallery
@@ -648,21 +790,23 @@
           attachImageSelection(rd);
           modelGalleries[u] = mergeGallery(modelGalleries[u], js.images);
           saveState();
-        } else rd.textContent = `No images for ${u}.`;
-      } catch(e) { rd.textContent = `Error: ${e}`; }
+        } else {
+          rd.textContent = `No images for ${u}.`;
+        }
+      } catch(e) {
+        rd.textContent = `Error: ${e}`;
+      }
     }
 
-    // JPG5 Gallery with duplicate check
+    // JPG5 Gallery
     async function fetchJPG5Gallery() {
       const urlInput = document.getElementById("jpg5-gallery-input").value.trim();
       const rd = document.getElementById("jpg5-gallery-results");
       if (!urlInput) return;
-
       if (savedJPG5Urls.includes(urlInput)) {
         showAdminFeedback("URL already exists! Check your JPG5 galleries.");
         return;
       }
-
       rd.textContent = `Fetching JPG5 images…`;
       clearSelection();
       try {
@@ -673,7 +817,6 @@
             `<div class="grid-item"><img src="${url}" data-url="${url}" class="selectable-image"></div>`
           ).join('');
           attachImageSelection(rd);
-
           const key = `JPG5 - ${new Date().toLocaleString()}`;
           modelGalleries[key] = js.images;
           savedJPG5Urls.push(urlInput);
@@ -683,62 +826,120 @@
         } else {
           rd.textContent = `No images found.`;
         }
-      } catch (e) {
+      } catch(e) {
         rd.textContent = `Error: ${e}`;
       }
     }
 
-    // Alphabet filter
+    // Alphabet filter & model lists
     function renderAlphabetFilter() {
-      const container = document.getElementById("alphabet-filter"),
+      const c = document.getElementById("alphabet-filter"),
             letters = ["All", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
-      container.innerHTML = "";
+      c.innerHTML = "";
       letters.forEach(l => {
-        const span = document.createElement("span");
-        span.textContent = l;
-        span.className = "alphabet-letter";
-        span.onclick = () => openLetterModels(l);
-        container.appendChild(span);
+        const s = document.createElement("span");
+        s.textContent = l;
+        s.className = "alphabet-letter";
+        s.onclick = () => openLetterModels(l);
+        c.appendChild(s);
       });
     }
+
     function openLetterModels(letter) {
+      currentLetter = letter;
       document.querySelector('.tabs').style.display = "none";
       contents.forEach(c => c.style.display = "none");
       document.getElementById("model-gallery-container").style.display = "none";
       const container = document.getElementById("letter-model-container");
       container.style.display = "block";
+
+      const normals = Object.keys(modelGalleries)
+        .filter(m => !m.startsWith("JPG5 -") && (letter === "All" || m.charAt(0).toUpperCase() === letter))
+        .sort();
+      const jpg5s = Object.keys(modelGalleries)
+        .filter(m => m.startsWith("JPG5 -") && (letter === "All" || m.charAt(0).toUpperCase() === letter))
+        .sort();
+
       let html = `<button class="btn" onclick="backToTabs()">Back</button><h2>Models "${letter}"</h2>`;
-      html += `<input type="text" id="model-search" placeholder="Search models…" onkeyup="filterModels('${letter}')">`;
-      html += `<div id="letter-model-grid" class="grid">`;
-      const all = Object.keys(modelGalleries).filter(m => !m.startsWith("Fapello -")).sort();
-      const filtered = letter === "All" ? all : all.filter(m => m.charAt(0).toUpperCase() === letter);
-      if (!filtered.length) html += `<p>No models.</p>`;
-      else filtered.forEach(m => {
-        const thumb = modelGalleries[m][0] || "";
-        html += `<div class="grid-item" onclick="openModelGallery('${m}')">
-                   <img src="${thumb}" alt="${m}"><div>${m}</div>
-                 </div>`;
-      });
+      html += `<input type="text" id="normal-model-search" placeholder="Search models…" onkeyup="filterNormalModels('${letter}')">`;
+      html += `<div id="normal-model-grid" class="grid">`;
+      if (!normals.length) {
+        html += `<p>No models.</p>`;
+      } else {
+        normals.forEach(m => {
+          const t = modelGalleries[m][0] || "";
+          html += `<div class="grid-item" onclick="openModelGallery('${m}')">
+                     <img src="${t}" alt="${m}">
+                     <div class="model-name">${m}</div>`;
+          if (isAdmin) {
+            html += `<button class="admin-btn" onclick="event.stopPropagation();removeModel('${m}')">Remove</button>`;
+          }
+          html += `</div>`;
+        });
+      }
       html += `</div>`;
+
+      if (jpg5s.length) {
+        html += `<button class="btn" id="toggle-jpg5-btn" onclick="toggleJPG5Section()">Show JPG5 Albums</button>`;
+        html += `<div id="jpg5-models-section" style="display:none;"><h2>JPG5 Albums</h2><div id="jpg5-model-grid" class="grid">`;
+        jpg5s.forEach(m => {
+          const t = modelGalleries[m][0] || "";
+          html += `<div class="grid-item" onclick="openModelGallery('${m}')">
+                     <img src="${t}" alt="${m}">
+                     <div class="model-name">${m}</div>`;
+          if (isAdmin) {
+            html += `<button class="admin-btn" onclick="event.stopPropagation();removeModel('${m}')">Remove</button>`;
+          }
+          html += `</div>`;
+        });
+        html += `</div></div>`;
+      }
+
       container.innerHTML = html;
     }
-    function filterModels(letter) {
-      const q = document.getElementById("model-search").value.toLowerCase(),
-            grid = document.getElementById("letter-model-grid");
-      const all = Object.keys(modelGalleries).filter(m => !m.startsWith("Fapello -")).sort();
-      const filtered = all.filter(m => {
-        const ok = letter === "All" ? true : m.charAt(0).toUpperCase() === letter;
-        return ok && m.toLowerCase().includes(q);
-      });
+
+    function filterNormalModels(letter) {
+      const q = document.getElementById("normal-model-search").value.toLowerCase();
+      const all = Object.keys(modelGalleries)
+        .filter(m => !m.startsWith("JPG5 -") && (letter === "All" || m.charAt(0).toUpperCase() === letter))
+        .sort();
+      const f = all.filter(m => m.toLowerCase().includes(q));
       let html = "";
-      if (!filtered.length) html = `<p>No match.</p>`;
-      else filtered.forEach(m => {
-        const thumb = modelGalleries[m][0] || "";
-        html += `<div class="grid-item" onclick="openModelGallery('${m}')">
-                  <img src="${thumb}" alt="${m}"><div>${m}</div>
-               </div>`;
-      });
-      grid.innerHTML = html;
+      if (!f.length) {
+        html = `<p>No match.</p>`;
+      } else {
+        f.forEach(m => {
+          const t = modelGalleries[m][0] || "";
+          html += `<div class="grid-item" onclick="openModelGallery('${m}')">
+                     <img src="${t}" alt="${m}">
+                     <div class="model-name">${m}</div>`;
+          if (isAdmin) {
+            html += `<button class="admin-btn" onclick="event.stopPropagation();removeModel('${m}')">Remove</button>`;
+          }
+          html += `</div>`;
+        });
+      }
+      document.getElementById("normal-model-grid").innerHTML = html;
+    }
+
+    function toggleJPG5Section() {
+      const sec = document.getElementById("jpg5-models-section"),
+            btn = document.getElementById("toggle-jpg5-btn");
+      if (sec.style.display === "none" || !sec.style.display) {
+        sec.style.display = "block";
+        btn.textContent = "Hide JPG5 Albums";
+      } else {
+        sec.style.display = "none";
+        btn.textContent = "Show JPG5 Albums";
+      }
+    }
+
+    function removeModel(name) {
+      if (!confirm(`Remove model ${name}? This will remove the entire album.`)) return;
+      delete modelGalleries[name];
+      saveState();
+      openLetterModels(currentLetter);
+      showAdminFeedback('Model removed');
     }
 
     // Model gallery view
@@ -773,6 +974,7 @@
         container.insertBefore(editBtn, container.querySelector('.grid'));
       }
     }
+
     function backToTabs() {
       document.getElementById("letter-model-container").style.display = "none";
       document.getElementById("model-gallery-container").style.display = "none";
@@ -780,76 +982,93 @@
       contents.forEach(c => c.style.display = "");
     }
 
-    // JPG5 sidebar
     function updateJPG5Sidebar() {
       const c = document.getElementById("saved-jpg5");
       c.innerHTML = "";
       const keys = Object.keys(modelGalleries).filter(k => k.startsWith("JPG5 -")).sort();
       if (!keys.length) {
         c.innerHTML = `<p style="text-align:center;color:#a8b2d1;">No JPG5 saved.</p>`;
-      } else keys.forEach(k => {
-        const t = modelGalleries[k][0] || "";
-        const d = document.createElement('div');
-        d.className = 'model-item';
-        d.innerHTML = `<img src="${t}" alt=""><div style="font-size:.7rem;color:#ccd6f6;">${k}</div>`;
-        d.onclick = () => openModelGallery(k);
-        c.appendChild(d);
-      });
+      } else {
+        keys.forEach(k => {
+          const t = modelGalleries[k][0] || "";
+          const d = document.createElement('div');
+          d.className = 'model-item';
+          d.innerHTML = `<img src="${t}" alt=""><div class="model-name">${k}</div>`;
+          d.onclick = () => openModelGallery(k);
+          c.appendChild(d);
+        });
+      }
     }
 
-// Function to fetch and update total visits
-async function fetchStats() {
-  try {
-    const response = await fetch(`${API_BASE}/api/stats`);
-    const data = await response.json();
-    // Only update if a valid totalVisits is returned
-    if (data.totalVisits !== undefined) {
-      document.getElementById("total-visits").textContent = data.totalVisits;
+    // Admin upload handler
+    async function uploadNewModel() {
+      const name = document.getElementById("new-model-name").value.trim();
+      const zipFile = document.getElementById("new-model-zip").files[0];
+      if (!name) {
+        return alert("Enter a model name.");
+      }
+      if (!zipFile) {
+        return alert("Select a ZIP file.");
+      }
+      try {
+        const zip = await JSZip.loadAsync(zipFile);
+        const entries = Object.values(zip.files)
+          .filter(f => !f.dir && /\.(jpe?g|png|gif|mp4|webm)$/i.test(f.name));
+        if (entries.length < 20) {
+          return alert("ZIP must contain at least 20 images/videos.");
+        }
+        const urls = [];
+        for (const file of entries) {
+          const blob = await file.async("blob");
+          urls.push(URL.createObjectURL(blob));
+        }
+        modelGalleries[name] = urls;
+        saveState();
+        showAdminFeedback("Model uploaded!");
+        renderAlphabetFilter();
+        openLetterModels(name.charAt(0).toUpperCase());
+      } catch (err) {
+        console.error(err);
+        alert("Error processing ZIP.");
+      }
     }
-  } catch (err) {
-    console.error("Error fetching stats:", err);
-  }
-}
-
-// Update total visits every 10 seconds (adjust interval as needed)
-setInterval(fetchStats, 10000);
-fetchStats();
-
-// Set up WebSocket connection to update online user count in real time
-const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-const ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
-
-ws.onopen = () => {
-  console.log("WebSocket connected.");
-};
-
-ws.onmessage = (event) => {
-  try {
-    const data = JSON.parse(event.data);
-    // Only update total visits if provided in the WebSocket data
-    if (data.totalVisits !== undefined) {
-      document.getElementById("total-visits").textContent = data.totalVisits;
+  </script>
+  <script>  
+    async function fetchStats() {
+      try {
+        const response = await fetch(`${API_BASE}/api/stats`);
+        const data = await response.json();
+        if (data.totalVisits !== undefined) {
+          document.getElementById("total-visits").textContent = data.totalVisits;
+        }
+      } catch (err) {
+        console.error("Error fetching stats:", err);
+      }
     }
-    // Update online users count if provided
-    if (data.onlineUsers !== undefined) {
-      document.getElementById("online-users").textContent = data.onlineUsers;
-    }
-  } catch (error) {
-    console.error("Error parsing WebSocket data:", error);
-  }
-};
 
-ws.onclose = () => {
-  console.log("WebSocket disconnected.");
-  document.getElementById("online-users").textContent = "0";
-};
-
-// Optionally, send a ping message every 30 seconds to keep the connection alive
-setInterval(() => {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send("ping");
-  }
-}, 30000);
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
+    ws.onopen = () => console.log("WebSocket connected.");
+    ws.onmessage = event => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.totalVisits !== undefined) {
+          document.getElementById("total-visits").textContent = data.totalVisits;
+        }
+        if (data.onlineUsers !== undefined) {
+          document.getElementById("online-users").textContent = data.onlineUsers;
+        }
+      } catch (e) {
+        console.error("Error parsing WebSocket data:", e);
+      }
+    };
+    ws.onclose = () => {
+      console.log("WebSocket disconnected.");
+      document.getElementById("online-users").textContent = "0";
+    };
+    setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) ws.send("ping");
+    }, 30000);
   </script>
 </body>
 </html>
