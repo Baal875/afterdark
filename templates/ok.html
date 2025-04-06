@@ -138,40 +138,6 @@
       margin-top: 20px;
     }
 
-    /* JPG5 sidebar */
-    #saved-jpg5 {
-      position: fixed;
-      bottom: 10px; right: 10px;
-      width: 200px;
-      background: rgba(10,25,47,0.9);
-      border: 2px solid #233554;
-      border-radius: 8px;
-      padding: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.7);
-      z-index: 1000;
-    }
-    #saved-jpg5 .model-item {
-      display: inline-block;
-      margin: 4px;
-      padding: 2px;
-      cursor: pointer;
-      transition: transform 0.3s;
-    }
-    #saved-jpg5 .model-item img {
-      width: 50px; height: 50px;
-      object-fit: cover;
-      border-radius: 4px;
-      display: block;
-    }
-    #saved-jpg5 .model-item div {
-      font-size: 0.7rem;
-      color: #ccd6f6;
-      text-align: center;
-    }
-    #saved-jpg5 .model-item:hover {
-      transform: scale(1.05);
-    }
-
     /* Context menu */
     #img-context-menu {
       position: fixed;
@@ -429,8 +395,6 @@
     </div>
   </div>
 
-  <div id="saved-jpg5"></div>
-
   <div class="layout">
     <button id="download-selected" class="btn" onclick="downloadSelectedImages()" style="display:none;">
       Download Selected
@@ -502,7 +466,6 @@
     const API_BASE = "http://localhost:8000/api";
     let isAdmin = false;
     let modelGalleries = {};
-    let savedJPG5Urls = [];
     let lastClicked = null;
     let currentGridImages = [];
     let selectedImages = new Set();
@@ -511,19 +474,15 @@
     const tabs = document.querySelectorAll('.tab');
     const contents = document.querySelectorAll('.tab-content');
 
-    // On load: restore state, render filter & sidebar, start stats
     window.onload = () => {
       const mg = localStorage.getItem('modelGalleries');
       if (mg) modelGalleries = JSON.parse(mg);
-      const su = localStorage.getItem('savedJPG5Urls');
-      if (su) savedJPG5Urls = JSON.parse(su);
       renderAlphabetFilter();
-      updateJPG5Sidebar();
       fetchStats();
       setInterval(fetchStats, 10000);
     };
 
-    // Admin toggle (Ctrl+0) and anti-inspect
+    // Admin toggle & anti-inspect
     document.onkeydown = e => {
       if (e.ctrlKey && e.key === '0') {
         e.preventDefault();
@@ -545,14 +504,12 @@
 
     function showAdminFeedback(msg) {
       const fb = document.getElementById('admin-feedback');
-      fb.textContent = msg;
-      fb.classList.add('show');
+      fb.textContent = msg; fb.classList.add('show');
       setTimeout(() => fb.classList.remove('show'), 2000);
     }
     function showOverlayMessage(msg) {
       const ov = document.getElementById("overlay-message");
-      ov.textContent = msg;
-      ov.classList.add("show");
+      ov.textContent = msg; ov.classList.add("show");
       setTimeout(() => ov.classList.add("fade-out"), 1000);
       setTimeout(() => {
         ov.classList.remove("show","fade-out");
@@ -560,7 +517,7 @@
       }, 2500);
     }
 
-    // Stats: REST + WebSocket
+    // Stats via REST + WS
     async function fetchStats() {
       try {
         const res = await fetch(`${API_BASE}/api/stats`);
@@ -568,374 +525,309 @@
         if (d.totalVisits !== undefined) {
           document.getElementById("total-visits").textContent = d.totalVisits;
         }
-      } catch (err) {
-        console.error("Error fetching stats:", err);
-      }
+      } catch {}
     }
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
-    ws.onopen = () => console.log("WebSocket connected.");
+    const wsProtocol = location.protocol==='https:'?'wss':'ws';
+    const ws = new WebSocket(`${wsProtocol}://${location.host}/ws`);
     ws.onmessage = e => {
       try {
         const d = JSON.parse(e.data);
-        if (d.totalVisits !== undefined) {
-          document.getElementById("total-visits").textContent = d.totalVisits;
-        }
-        if (d.onlineUsers !== undefined) {
-          document.getElementById("online-users").textContent = d.onlineUsers;
-        }
-      } catch (err) {
-        console.error("Error parsing WebSocket data:", err);
-      }
+        if (d.totalVisits!==undefined) document.getElementById("total-visits").textContent = d.totalVisits;
+        if (d.onlineUsers!==undefined) document.getElementById("online-users").textContent = d.onlineUsers;
+      } catch{}
     };
-    ws.onclose = () => {
-      console.log("WebSocket disconnected.");
-      document.getElementById("online-users").textContent = "0";
-    };
-    setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) ws.send("ping");
-    }, 30000);
+    ws.onclose = () => document.getElementById("online-users").textContent="0";
+    setInterval(()=>{ if(ws.readyState===WebSocket.OPEN) ws.send("ping") },30000);
 
-    // Persist
     function saveState() {
       localStorage.setItem('modelGalleries', JSON.stringify(modelGalleries));
-      localStorage.setItem('savedJPG5Urls', JSON.stringify(savedJPG5Urls));
     }
     function mergeGallery(orig, imgs) {
       if (!orig) return imgs;
-      imgs.forEach(u => { if (!orig.includes(u)) orig.push(u); });
+      imgs.forEach(u=>{ if(!orig.includes(u)) orig.push(u) });
       return orig;
     }
 
-    // Tabs navigation
-    tabs.forEach(t => t.onclick = () => {
-      tabs.forEach(x => x.classList.remove('active'));
-      contents.forEach(c => c.classList.remove('active'));
+    tabs.forEach(t=>t.onclick=()=>{
+      tabs.forEach(x=>x.classList.remove('active'));
+      contents.forEach(c=>c.classList.remove('active'));
       t.classList.add('active');
       document.getElementById(t.dataset.tab).classList.add('active');
       clearSelection();
     });
 
-    // Image selection & download
     function clearSelection() {
-      selectedImages.clear();
-      lastClicked = null;
-      currentGridImages.forEach(i => i.classList.remove('selected'));
-      document.getElementById("download-selected").style.display = "none";
+      selectedImages.clear(); lastClicked=null;
+      currentGridImages.forEach(i=>i.classList.remove('selected'));
+      document.getElementById("download-selected").style.display="none";
     }
-    document.addEventListener('keydown', e => {
-      if (e.shiftKey && (e.key === 'a' || e.key === 'A')) selectAllImages();
+    document.addEventListener('keydown',e=>{
+      if(e.shiftKey&&(e.key==='a'||e.key==='A')) selectAllImages();
     });
-    function selectAllImages() {
-      currentGridImages.forEach(img => {
+    function selectAllImages(){
+      currentGridImages.forEach(img=>{
         img.classList.add('selected');
         selectedImages.add(img.dataset.url);
       });
-      document.getElementById("download-selected").style.display = "block";
+      document.getElementById("download-selected").style.display="block";
     }
-    function attachImageSelection(container) {
-      currentGridImages = Array.from(container.querySelectorAll('.selectable-image'));
-      currentGridImages.forEach((img, i) => {
-        if (isAdmin) {
-          const parent = img.closest('.grid-item');
-          if (!parent.querySelector('.delete-btn')) {
-            const d = document.createElement('button');
-            d.textContent = '×';
-            d.className = 'delete-btn';
-            parent.appendChild(d);
-            d.onclick = e => {
+    function attachImageSelection(container){
+      currentGridImages=Array.from(container.querySelectorAll('.selectable-image'));
+      currentGridImages.forEach((img,i)=>{
+        if(isAdmin){
+          const p=img.closest('.grid-item');
+          if(!p.querySelector('.delete-btn')){
+            const d=document.createElement('button');
+            d.textContent='×'; d.className='delete-btn';
+            p.appendChild(d);
+            d.onclick=e=>{
               e.stopPropagation();
-              if (confirm('Remove this image?')) {
-                const url = img.dataset.url;
-                for (const k in modelGalleries) {
-                  modelGalleries[k] = modelGalleries[k].filter(u => u !== url);
+              if(confirm('Remove this image?')){
+                const url=img.dataset.url;
+                for(const k in modelGalleries){
+                  modelGalleries[k]=modelGalleries[k].filter(u=>u!==url);
                 }
-                saveState();
-                parent.remove();
-                showAdminFeedback('Image removed');
+                saveState(); p.remove(); showAdminFeedback('Image removed');
               }
             };
           }
         }
-        img.onclick = e => {
-          if (e.shiftKey && lastClicked !== null) {
-            const [s,eI] = [Math.min(lastClicked,i),Math.max(lastClicked,i)];
-            for (let j=s; j<=eI; j++) {
+        img.onclick=e=>{
+          if(e.shiftKey&&lastClicked!==null){
+            const [s,eI]=[Math.min(lastClicked,i),Math.max(lastClicked,i)];
+            for(let j=s;j<=eI;j++){
               currentGridImages[j].classList.add('selected');
               selectedImages.add(currentGridImages[j].dataset.url);
             }
           } else {
-            if (img.classList.toggle('selected')) {
+            if(img.classList.toggle('selected')){
               selectedImages.add(img.dataset.url);
             } else {
               selectedImages.delete(img.dataset.url);
             }
-            lastClicked = i;
+            lastClicked=i;
           }
-          document.getElementById("download-selected").style.display = selectedImages.size ? "block":"none";
+          document.getElementById("download-selected").style.display=selectedImages.size?"block":"none";
         };
       });
     }
-    async function downloadSelectedImages() {
-      if (!selectedImages.size) return;
-      const zip = new JSZip(), fld = zip.folder("after_dark_images"), urls = [...selectedImages];
-      for (let i=0; i<urls.length; i++) {
-        try {
-          const r = await fetch(urls[i]), b = await r.blob(),
-                ext = urls[i].split('.').pop().split('?')[0];
-          fld.file(`image_${i}.${ext}`, b);
-        } catch(err) {
-          console.error(err);
-        }
+    async function downloadSelectedImages(){
+      if(!selectedImages.size)return;
+      const zip=new JSZip(),fld=zip.folder("after_dark_images"),urls=[...selectedImages];
+      for(let i=0;i<urls.length;i++){
+        try{
+          const r=await fetch(urls[i]),b=await r.blob(),
+                ext=urls[i].split('.').pop().split('?')[0];
+          fld.file(`image_${i}.${ext}`,b);
+        }catch{}
       }
-      const blob = await zip.generateAsync({type:"blob"});
-      saveAs(blob, "selected_images.zip");
+      const blob=await zip.generateAsync({type:"blob"});
+      saveAs(blob,"selected_images.zip");
     }
 
     // Erome Albums
-    async function searchEromeAlbums() {
-      const u = document.getElementById("erome-albums-input").value.trim(),
-            rd = document.getElementById("erome-albums-results");
-      rd.textContent = `Searching albums for ${u}…`;
-      try {
-        const res = await fetch(`${API_BASE}/erome-albums?username=${encodeURIComponent(u)}`),
-              js = await res.json();
-        if (js.albums?.length) {
-          rd.innerHTML = `<h3>Found ${js.albums.length}:</h3>` +
-            js.albums.map(l =>
-              `<div>
-                 <a href="${l}" target="_blank">${l}</a>
-                 ${isAdmin?`<button class="admin-btn" onclick="removeAlbum('${l}')">Remove</button>`:''}
-               </div>`).join('');
-        } else {
-          rd.textContent = `No albums for ${u}.`;
-        }
-      } catch(e) {
-        rd.textContent = `Error: ${e}`;
-      }
+    async function searchEromeAlbums(){
+      const u=document.getElementById("erome-albums-input").value.trim(),
+            rd=document.getElementById("erome-albums-results");
+      rd.textContent=`Searching albums for ${u}…`;
+      try{
+        const res=await fetch(`${API_BASE}/erome-albums?username=${encodeURIComponent(u)}`),
+              js=await res.json();
+        if(js.albums?.length){
+          rd.innerHTML=`<h3>Found ${js.albums.length}:</h3>`+
+            js.albums.map(l=>
+              `<div><a href="${l}" target="_blank">${l}</a>`+
+              (isAdmin?` <button class="admin-btn" onclick="removeAlbum('${l}')">Remove</button>`:'')+
+              `</div>`
+            ).join('');
+        } else rd.textContent=`No albums for ${u}.`;
+      }catch(e){ rd.textContent=`Error: ${e}`; }
     }
-    function removeAlbum(url) {
-      if (!confirm(`Remove album ${url}?`)) return;
-      for (const k in modelGalleries) {
-        modelGalleries[k] = modelGalleries[k].filter(l => l !== url);
+    function removeAlbum(url){
+      if(!confirm(`Remove album ${url}?`))return;
+      for(const k in modelGalleries){
+        modelGalleries[k]=modelGalleries[k].filter(l=>l!==url);
       }
       saveState();
       document.getElementById('erome-albums-results')
-        .querySelectorAll('a').forEach(a => {
-          if (a.href === url) a.parentElement.remove();
+        .querySelectorAll('a').forEach(a=>{
+          if(a.href===url) a.parentElement.remove();
         });
       showAdminFeedback('Album removed');
     }
 
     // Erome Gallery
-    async function fetchEromeGallery() {
-      const u = document.getElementById("erome-gallery-input").value.trim(),
-            rd = document.getElementById("erome-gallery-results");
-      rd.textContent = `Fetching images for ${u}…`;
+    async function fetchEromeGallery(){
+      const u=document.getElementById("erome-gallery-input").value.trim(),
+            rd=document.getElementById("erome-gallery-results");
+      rd.textContent=`Fetching images for ${u}…`;
       clearSelection();
-      try {
-        const res = await fetch(`${API_BASE}/erome-gallery?username=${encodeURIComponent(u)}`),
-              js = await res.json();
-        if (js.images?.length) {
-          rd.innerHTML = js.images.map(url =>
+      try{
+        const res=await fetch(`${API_BASE}/erome-gallery?username=${encodeURIComponent(u)}`),
+              js=await res.json();
+        if(js.images?.length){
+          rd.innerHTML=js.images.map(url=>
             `<div class="grid-item"><img src="${url}" data-url="${url}" class="selectable-image"></div>`
           ).join('');
           attachImageSelection(rd);
-          modelGalleries[u] = mergeGallery(modelGalleries[u], js.images);
+          modelGalleries[u]=mergeGallery(modelGalleries[u],js.images);
           saveState();
-        } else {
-          rd.textContent = `No images for ${u}.`;
-        }
-      } catch(e) {
-        rd.textContent = `Error: ${e}`;
-      }
+        } else rd.textContent=`No images for ${u}.`;
+      }catch(e){ rd.textContent=`Error: ${e}`; }
     }
 
     // Bunkr Albums
-    async function searchBunkrLinks() {
-      const u = document.getElementById("bunkr-albums-input").value.trim(),
-            rd = document.getElementById("bunkr-albums-results");
-      rd.textContent = `Searching links for ${u}…`;
-      try {
-        const res = await fetch(`${API_BASE}/bunkr-albums?username=${encodeURIComponent(u)}`),
-              js = await res.json();
-        if (js.albums?.length) {
-          rd.innerHTML = `<h3>Found ${js.albums.length}:</h3>` +
-            js.albums.map(l =>
-              `<div>
-                 <a href="${l}" target="_blank">${l}</a>
-                 ${isAdmin?`<button class="admin-btn" onclick="removeAlbum('${l}')">Remove</button>`:''}
-               </div>`).join('');
-        } else {
-          rd.textContent = `No links for ${u}.`;
-        }
-      } catch(e) {
-        rd.textContent = `Error: ${e}`;
-      }
+    async function searchBunkrLinks(){
+      const u=document.getElementById("bunkr-albums-input").value.trim(),
+            rd=document.getElementById("bunkr-albums-results");
+      rd.textContent=`Searching links for ${u}…`;
+      try{
+        const res=await fetch(`${API_BASE}/bunkr-albums?username=${encodeURIComponent(u)}`),
+              js=await res.json();
+        if(js.albums?.length){
+          rd.innerHTML=`<h3>Found ${js.albums.length}:</h3>`+
+            js.albums.map(l=>
+              `<div><a href="${l}" target="_blank">${l}</a>`+
+              (isAdmin?` <button class="admin-btn" onclick="removeAlbum('${l}')">Remove</button>`:'')+
+              `</div>`
+            ).join('');
+        } else rd.textContent=`No links for ${u}.`;
+      }catch(e){ rd.textContent=`Error: ${e}`; }
     }
 
     // Bunkr Gallery
-    async function fetchBunkrGallery() {
-      const u = document.getElementById("bunkr-gallery-input").value.trim(),
-            rd = document.getElementById("bunkr-gallery-results");
-      rd.textContent = `Fetching images for ${u}…`;
+    async function fetchBunkrGallery(){
+      const u=document.getElementById("bunkr-gallery-input").value.trim(),
+            rd=document.getElementById("bunkr-gallery-results");
+      rd.textContent=`Fetching images for ${u}…`;
       clearSelection();
-      try {
-        const res = await fetch(`${API_BASE}/bunkr-gallery?username=${encodeURIComponent(u)}`),
-              js = await res.json();
-        if (js.images?.length) {
-          rd.innerHTML = js.images.map(url =>
+      try{
+        const res=await fetch(`${API_BASE}/bunkr-gallery?username=${encodeURIComponent(u)}`),
+              js=await res.json();
+        if(js.images?.length){
+          rd.innerHTML=js.images.map(url=>
             `<div class="grid-item"><img src="${url}" data-url="${url}" class="selectable-image"></div>`
           ).join('');
           attachImageSelection(rd);
-          modelGalleries[u] = mergeGallery(modelGalleries[u], js.images);
+          modelGalleries[u]=mergeGallery(modelGalleries[u],js.images);
           saveState();
-        } else {
-          rd.textContent = `No images for ${u}.`;
-        }
-      } catch(e) {
-        rd.textContent = `Error: ${e}`;
-      }
+        } else rd.textContent=`No images for ${u}.`;
+      }catch(e){ rd.textContent=`Error: ${e}`; }
     }
 
     // JPG5 Gallery
-    async function fetchJPG5Gallery() {
-      const urlInput = document.getElementById("jpg5-gallery-input").value.trim();
-      const rd = document.getElementById("jpg5-gallery-results");
-      if (!urlInput) return;
-      if (savedJPG5Urls.includes(urlInput)) {
-        showAdminFeedback("URL already exists! Check your JPG5 galleries.");
-        return;
-      }
-      rd.textContent = `Fetching JPG5 images…`;
+    async function fetchJPG5Gallery(){
+      const urlInput=document.getElementById("jpg5-gallery-input").value.trim();
+      const rd=document.getElementById("jpg5-gallery-results");
+      if(!urlInput) return;
+      rd.textContent=`Fetching JPG5 images…`;
       clearSelection();
-      try {
-        const res = await fetch(`${API_BASE}/jpg5-gallery?album_url=${encodeURIComponent(urlInput)}`);
-        const js = await res.json();
-        if (js.images?.length) {
-          rd.innerHTML = js.images.map(url =>
+      try{
+        const res=await fetch(`${API_BASE}/jpg5-gallery?album_url=${encodeURIComponent(urlInput)}`),
+              js=await res.json();
+        if(js.images?.length){
+          rd.innerHTML=js.images.map(url=>
             `<div class="grid-item"><img src="${url}" data-url="${url}" class="selectable-image"></div>`
           ).join('');
           attachImageSelection(rd);
-          const key = `JPG5 - ${new Date().toLocaleString()}`;
-          modelGalleries[key] = js.images;
-          savedJPG5Urls.push(urlInput);
+          const key=`JPG5 - ${new Date().toLocaleString()}`;
+          modelGalleries[key]=js.images;
           saveState();
-          updateJPG5Sidebar();
-          showAdminFeedback("JPG5 gallery saved!");
-        } else {
-          rd.textContent = `No images found.`;
-        }
-      } catch(e) {
-        rd.textContent = `Error: ${e}`;
-      }
+          showAdminFeedback("JPG5 gallery added under Models.");
+        } else rd.textContent=`No images found.`;
+      }catch(e){ rd.textContent=`Error: ${e}`; }
     }
 
     // Alphabet filter & model lists
-    function renderAlphabetFilter() {
-      const c = document.getElementById("alphabet-filter"),
-            letters = ["All", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
-      c.innerHTML = "";
-      letters.forEach(l => {
-        const s = document.createElement("span");
-        s.textContent = l;
-        s.className = "alphabet-letter";
-        s.onclick = () => openLetterModels(l);
+    function renderAlphabetFilter(){
+      const c=document.getElementById("alphabet-filter"),
+            letters=["All",..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
+      c.innerHTML="";
+      letters.forEach(l=>{
+        const s=document.createElement("span");
+        s.textContent=l; s.className="alphabet-letter";
+        s.onclick=()=>openLetterModels(l);
         c.appendChild(s);
       });
     }
 
-    function openLetterModels(letter) {
-      currentLetter = letter;
-      document.querySelector('.tabs').style.display = "none";
-      contents.forEach(c => c.style.display = "none");
-      document.getElementById("model-gallery-container").style.display = "none";
-      const container = document.getElementById("letter-model-container");
-      container.style.display = "block";
+    function openLetterModels(letter){
+      currentLetter=letter;
+      document.querySelector('.tabs').style.display="none";
+      contents.forEach(c=>c.style.display="none");
+      document.getElementById("model-gallery-container").style.display="none";
+      const container=document.getElementById("letter-model-container");
+      container.style.display="block";
 
-      const normals = Object.keys(modelGalleries)
-        .filter(m => !m.startsWith("JPG5 -") && (letter === "All" || m.charAt(0).toUpperCase() === letter))
+      const normals=Object.keys(modelGalleries)
+        .filter(m=>!m.startsWith("JPG5 -")&&(letter==="All"||m[0].toUpperCase()===letter))
         .sort();
-      const jpg5s = Object.keys(modelGalleries)
-        .filter(m => m.startsWith("JPG5 -") && (letter === "All" || m.charAt(0).toUpperCase() === letter))
+      const jpg5s=Object.keys(modelGalleries)
+        .filter(m=>m.startsWith("JPG5 -")&&(letter==="All"||m[0].toUpperCase()===letter))
         .sort();
 
-      let html = `<button class="btn" onclick="backToTabs()">Back</button><h2>Models "${letter}"</h2>`;
-      html += `<input type="text" id="normal-model-search" placeholder="Search models…" onkeyup="filterNormalModels('${letter}')">`;
-      html += `<div id="normal-model-grid" class="grid">`;
-      if (!normals.length) {
-        html += `<p>No models.</p>`;
-      } else {
-        normals.forEach(m => {
-          const t = modelGalleries[m][0] || "";
-          html += `<div class="grid-item" onclick="openModelGallery('${m}')">
-                     <img src="${t}" alt="${m}">
-                     <div class="model-name">${m}</div>`;
-          if (isAdmin) {
-            html += `<button class="admin-btn" onclick="event.stopPropagation();removeModel('${m}')">Remove</button>`;
-          }
-          html += `</div>`;
-        });
-      }
-      html += `</div>`;
+      let html=`<button class="btn" onclick="backToTabs()">Back</button><h2>Models "${letter}"</h2>`;
+      html+=`<input type="text" id="normal-model-search" placeholder="Search models…" onkeyup="filterNormalModels('${letter}')">`;
+      html+=`<div id="normal-model-grid" class="grid">`;
+      if(!normals.length) html+=`<p>No models.</p>`;
+      else normals.forEach(m=>{
+        const t=modelGalleries[m][0]||"";
+        html+=`<div class="grid-item" onclick="openModelGallery('${m}')">
+                 <img src="${t}" alt="${m}">
+                 <div class="model-name">${m}</div>`;
+        if(isAdmin) html+=`<button class="admin-btn" onclick="event.stopPropagation();removeModel('${m}')">Remove</button>`;
+        html+=`</div>`;
+      });
+      html+=`</div>`;
 
-      if (jpg5s.length) {
-        html += `<button class="btn" id="toggle-jpg5-btn" onclick="toggleJPG5Section()">Show JPG5 Albums</button>`;
-        html += `<div id="jpg5-models-section" style="display:none;"><h2>JPG5 Albums</h2><div id="jpg5-model-grid" class="grid">`;
-        jpg5s.forEach(m => {
-          const t = modelGalleries[m][0] || "";
-          html += `<div class="grid-item" onclick="openModelGallery('${m}')">
-                     <img src="${t}" alt="${m}">
-                     <div class="model-name">${m}</div>`;
-          if (isAdmin) {
-            html += `<button class="admin-btn" onclick="event.stopPropagation();removeModel('${m}')">Remove</button>`;
-          }
-          html += `</div>`;
+      if(jpg5s.length){
+        html+=`<button class="btn" id="toggle-jpg5-btn" onclick="toggleJPG5Section()">Show JPG5 Albums</button>`;
+        html+=`<div id="jpg5-models-section" style="display:none;"><h2>JPG5 Albums</h2><div id="jpg5-model-grid" class="grid">`;
+        jpg5s.forEach(m=>{
+          const t=modelGalleries[m][0]||"";
+          html+=`<div class="grid-item" onclick="openModelGallery('${m}')">
+                   <img src="${t}" alt="${m}">
+                   <div class="model-name">${m}</div>`;
+          if(isAdmin) html+=`<button class="admin-btn" onclick="event.stopPropagation();removeModel('${m}')">Remove</button>`;
+          html+=`</div>`;
         });
-        html += `</div></div>`;
+        html+=`</div></div>`;
       }
 
-      container.innerHTML = html;
+      container.innerHTML=html;
     }
 
-    function filterNormalModels(letter) {
-      const q = document.getElementById("normal-model-search").value.toLowerCase();
-      const all = Object.keys(modelGalleries)
-        .filter(m => !m.startsWith("JPG5 -") && (letter === "All" || m.charAt(0).toUpperCase() === letter))
+    function filterNormalModels(letter){
+      const q=document.getElementById("normal-model-search").value.toLowerCase();
+      const all=Object.keys(modelGalleries)
+        .filter(m=>!m.startsWith("JPG5 -")&&(letter==="All"||m[0].toUpperCase()===letter))
         .sort();
-      const f = all.filter(m => m.toLowerCase().includes(q));
-      let html = "";
-      if (!f.length) {
-        html = `<p>No match.</p>`;
-      } else {
-        f.forEach(m => {
-          const t = modelGalleries[m][0] || "";
-          html += `<div class="grid-item" onclick="openModelGallery('${m}')">
-                     <img src="${t}" alt="${m}">
-                     <div class="model-name">${m}</div>`;
-          if (isAdmin) {
-            html += `<button class="admin-btn" onclick="event.stopPropagation();removeModel('${m}')">Remove</button>`;
-          }
-          html += `</div>`;
-        });
-      }
-      document.getElementById("normal-model-grid").innerHTML = html;
+      const f=all.filter(m=>m.toLowerCase().includes(q));
+      let html="";
+      if(!f.length) html=`<p>No match.</p>`;
+      else f.forEach(m=>{
+        const t=modelGalleries[m][0]||"";
+        html+=`<div class="grid-item" onclick="openModelGallery('${m}')">
+                 <img src="${t}" alt="${m}">
+                 <div class="model-name">${m}</div>`;
+        if(isAdmin) html+=`<button class="admin-btn" onclick="event.stopPropagation();removeModel('${m}')">Remove</button>`;
+        html+=`</div>`;
+      });
+      document.getElementById("normal-model-grid").innerHTML=html;
     }
 
-    function toggleJPG5Section() {
-      const sec = document.getElementById("jpg5-models-section"),
-            btn = document.getElementById("toggle-jpg5-btn");
-      if (sec.style.display === "none" || !sec.style.display) {
-        sec.style.display = "block";
-        btn.textContent = "Hide JPG5 Albums";
+    function toggleJPG5Section(){
+      const sec=document.getElementById("jpg5-models-section"),
+            btn=document.getElementById("toggle-jpg5-btn");
+      if(sec.style.display==="none"||!sec.style.display){
+        sec.style.display="block"; btn.textContent="Hide JPG5 Albums";
       } else {
-        sec.style.display = "none";
-        btn.textContent = "Show JPG5 Albums";
+        sec.style.display="none"; btn.textContent="Show JPG5 Albums";
       }
     }
 
-    function removeModel(name) {
-      if (!confirm(`Remove model ${name}? This will remove the entire album.`)) return;
+    function removeModel(name){
+      if(!confirm(`Remove model ${name}? This will remove the entire album.`))return;
       delete modelGalleries[name];
       saveState();
       openLetterModels(currentLetter);
@@ -943,91 +835,67 @@
     }
 
     // Model gallery view
-    function openModelGallery(model) {
-      document.getElementById("letter-model-container").style.display = "none";
-      document.querySelector('.tabs').style.display = "none";
-      contents.forEach(c => c.style.display = "none");
-      const container = document.getElementById("model-gallery-container");
-      container.style.display = "block";
-      let html = `<button class="btn" onclick="backToTabs()">Back</button>
+    function openModelGallery(model){
+      document.getElementById("letter-model-container").style.display="none";
+      document.querySelector('.tabs').style.display="none";
+      contents.forEach(c=>c.style.display="none");
+      const container=document.getElementById("model-gallery-container");
+      container.style.display="block";
+      let html=`<button class="btn" onclick="backToTabs()">Back</button>
                   <h2>${model}</h2><div class="grid">`;
-      modelGalleries[model].forEach(u => {
-        html += `<div class="grid-item"><img src="${u}" data-url="${u}" class="selectable-image"></div>`;
+      modelGalleries[model].forEach(u=>{
+        html+=`<div class="grid-item"><img src="${u}" data-url="${u}" class="selectable-image"></div>`;
       });
-      html += `</div>`;
-      container.innerHTML = html;
+      html+=`</div>`;
+      container.innerHTML=html;
       attachImageSelection(container);
 
-      if (isAdmin) {
-        const editBtn = document.createElement('button');
-        editBtn.textContent = 'Edit Thumb';
-        editBtn.className = 'admin-btn';
-        editBtn.onclick = () => {
-          const nt = prompt("New thumb URL:");
-          if (nt) {
-            modelGalleries[model][0] = nt;
+      if(isAdmin){
+        const editBtn=document.createElement('button');
+        editBtn.textContent='Edit Thumb';
+        editBtn.className='admin-btn';
+        editBtn.onclick=()=>{
+          const nt=prompt("New thumb URL:");
+          if(nt){
+            modelGalleries[model][0]=nt;
             saveState();
             showAdminFeedback('Thumbnail updated');
             backToTabs();
           }
         };
-        container.insertBefore(editBtn, container.querySelector('.grid'));
+        container.insertBefore(editBtn,container.querySelector('.grid'));
       }
     }
 
-    function backToTabs() {
-      document.getElementById("letter-model-container").style.display = "none";
-      document.getElementById("model-gallery-container").style.display = "none";
-      document.querySelector('.tabs').style.display = "flex";
-      contents.forEach(c => c.style.display = "");
-    }
-
-    function updateJPG5Sidebar() {
-      const c = document.getElementById("saved-jpg5");
-      c.innerHTML = "";
-      const keys = Object.keys(modelGalleries).filter(k => k.startsWith("JPG5 -")).sort();
-      if (!keys.length) {
-        c.innerHTML = `<p style="text-align:center;color:#a8b2d1;">No JPG5 saved.</p>`;
-      } else {
-        keys.forEach(k => {
-          const t = modelGalleries[k][0] || "";
-          const d = document.createElement('div');
-          d.className = 'model-item';
-          d.innerHTML = `<img src="${t}" alt=""><div class="model-name">${k}</div>`;
-          d.onclick = () => openModelGallery(k);
-          c.appendChild(d);
-        });
-      }
+    function backToTabs(){
+      document.getElementById("letter-model-container").style.display="none";
+      document.getElementById("model-gallery-container").style.display="none";
+      document.querySelector('.tabs').style.display="flex";
+      contents.forEach(c=>c.style.display="");
     }
 
     // Admin upload handler
-    async function uploadNewModel() {
-      const name = document.getElementById("new-model-name").value.trim();
-      const zipFile = document.getElementById("new-model-zip").files[0];
-      if (!name) {
-        return alert("Enter a model name.");
-      }
-      if (!zipFile) {
-        return alert("Select a ZIP file.");
-      }
+    async function uploadNewModel(){
+      const name=document.getElementById("new-model-name").value.trim();
+      const zipFile=document.getElementById("new-model-zip").files[0];
+      if(!name) return alert("Enter a model name.");
+      if(!zipFile) return alert("Select a ZIP file.");
       try {
-        const zip = await JSZip.loadAsync(zipFile);
-        const entries = Object.values(zip.files)
-          .filter(f => !f.dir && /\.(jpe?g|png|gif|mp4|webm)$/i.test(f.name));
-        if (entries.length < 20) {
-          return alert("ZIP must contain at least 20 images/videos.");
-        }
-        const urls = [];
-        for (const file of entries) {
-          const blob = await file.async("blob");
+        const zip=await JSZip.loadAsync(zipFile);
+        const entries=Object.values(zip.files)
+          .filter(f=>!f.dir&&/\.(jpe?g|png|gif|mp4|webm)$/i.test(f.name));
+        if(entries.length<20) return alert("ZIP must contain at least 20 images/videos.");
+        const urls=[];
+        for(const file of entries){
+          const blob=await file.async("blob");
           urls.push(URL.createObjectURL(blob));
         }
-        modelGalleries[name] = urls;
+        modelGalleries[name]=urls;
         saveState();
         showAdminFeedback("Model uploaded!");
         renderAlphabetFilter();
         openLetterModels(name.charAt(0).toUpperCase());
-      } catch (err) {
+      } catch(err){
         console.error(err);
         alert("Error processing ZIP.");
       }
