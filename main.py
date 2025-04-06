@@ -49,9 +49,6 @@ async def read_index(request: Request):
     return templates.TemplateResponse("ok.html", {"request": request})
 
 # ------------------- Helper Functions ------------------- #
-def is_url(identifier: str) -> bool:
-    return identifier.startswith("http")
-
 def parse_links_and_titles(page_content, pattern, title_class):
     soup = BeautifulSoup(page_content, 'html.parser')
     links = [a['href'] for a in soup.find_all('a', href=True) if re.match(pattern, a['href'])]
@@ -73,7 +70,7 @@ def extract_album_links(page_content):
             links.add(href)
     return list(links)
 
-async def fetch_all_album_pages_by_username(username, max_pages=10):
+async def fetch_all_album_pages(username, max_pages=10):
     all_links = set()
     async with aiohttp.ClientSession() as session:
         for page in range(1, max_pages + 1):
@@ -85,13 +82,6 @@ async def fetch_all_album_pages_by_username(username, max_pages=10):
             for link in links:
                 all_links.add(link)
     return list(all_links)
-
-async def fetch_album_page_from_url(url: str):
-    async with aiohttp.ClientSession() as session:
-        text, _, status = await get_webpage_content(url, session)
-        if status != 200:
-            return []
-        return extract_album_links(text)
 
 async def fetch_image_urls(album_url, session):
     page_content, base_url, _ = await get_webpage_content(album_url, session)
@@ -144,21 +134,6 @@ async def get_all_album_links_from_search(username):
         page += 1
     return all_albums
 
-async def get_album_info_from_url(url: str):
-    # Directly fetch the page and parse album info
-    async with aiohttp.ClientSession() as session:
-        text, _, status = await get_webpage_content(url, session)
-        if status != 200:
-            return None
-        # Using the same parsing as search
-        pattern = r"^https://bunkr\.cr/a/.*"
-        title_class = "album-title"  # Adjust as needed
-        links, titles = parse_links_and_titles(text, pattern, title_class)
-        if links and titles:
-            return {"url": url, "title": titles[0]}
-        else:
-            return {"url": url, "title": "Unknown Title"}
-
 async def get_image_links_from_album(album_url, session):
     async with session.get(album_url) as response:
         if response.status != 200:
@@ -198,8 +173,9 @@ async def validate_url(url, session):
 
 thumb_pattern = re.compile(r"/thumb/")
 
-async def fetch_bunkr_gallery_images_from_albums(albums):
+async def fetch_bunkr_gallery_images(username):
     async with aiohttp.ClientSession() as session:
+        albums = await get_all_album_links_from_search(username)
         tasks = []
         for album in albums:
             img_page_links = await get_image_links_from_album(album["url"], session)
@@ -248,7 +224,7 @@ async def fetch_fapello_album_media(album_url: str) -> dict:
     username = path_parts[0]
     async with aiohttp.ClientSession(
         headers={
-            "User-Agent": "Mozilla/5.0",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
             "Referer": album_url
         }
     ) as session:
@@ -307,78 +283,60 @@ async def extract_jpg5_album_media_urls(album_url):
 
 # ------------------- API Endpoints ------------------- #
 
-# --- Erome Endpoints ---
+# Erome Albums Endpoint (username only)
 @app.get("/api/erome-albums")
-async def get_erome_albums(identifier: str):
-    """
-    Accepts either a username or an album URL.
-      - If a URL (and contains "erome.com"), fetches the album links directly from that page.
-      - Otherwise, uses the username to perform a search.
-    """
+async def get_erome_albums(username: str):
     try:
-        if is_url(identifier) and "erome.com" in identifier:
-            album_links = await fetch_album_page_from_url(identifier)
-        else:
-            album_links = await fetch_all_album_pages_by_username(identifier)
+        album_links = await fetch_all_album_pages(username)
         return {"albums": album_links}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Erome Gallery Endpoint (supports URL or username)
 @app.get("/api/erome-gallery")
-async def get_erome_gallery(identifier: str):
-    """
-    Accepts either a username or an album URL.
-      - If a URL (and contains "erome.com"), fetches images from that album page.
-      - Otherwise, uses the username to search for albums and then fetches all gallery images.
-    """
+async def get_erome_gallery(query: str):
     try:
-        if is_url(identifier) and "erome.com" in identifier:
-            # Assume direct album URL; wrap into a list
-            album_urls = [identifier]
-        else:
-            album_urls = await fetch_all_album_pages_by_username(identifier)
-        image_urls = await fetch_all_erome_image_urls(album_urls)
-        return {"images": image_urls}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# --- Bunkr Endpoints ---
-@app.get("/api/bunkr-albums")
-async def get_bunkr_albums(identifier: str):
-    """
-    Accepts either a username or a direct album URL.
-      - If a URL (and contains "bunkr"), returns album info based on that URL.
-      - Otherwise, performs a search using the username.
-    """
-    try:
-        if is_url(identifier) and "bunkr" in identifier:
-            album_info = await get_album_info_from_url(identifier)
-            albums = [album_info] if album_info else []
-        else:
-            albums = await get_all_album_links_from_search(identifier)
-        return {"albums": albums}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/bunkr-gallery")
-async def get_bunkr_gallery(identifier: str):
-    """
-    Accepts either a username or a direct album URL.
-      - If a URL (and contains "bunkr"), fetches gallery images from that album.
-      - Otherwise, searches for albums using the username and aggregates images from all found albums.
-    """
-    try:
-        if is_url(identifier) and "bunkr" in identifier:
-            # For a direct URL, build a list with a single album info dictionary
-            albums = [{"url": identifier, "title": "Direct Album"}]
-        else:
-            albums = await get_all_album_links_from_search(identifier)
-        images = await fetch_bunkr_gallery_images_from_albums(albums)
+        async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0"}) as session:
+            # If query looks like a URL, treat it as an album URL directly.
+            if query.startswith("http"):
+                images = await fetch_image_urls(query, session)
+            else:
+                album_links = await fetch_all_album_pages(query)
+                images = await fetch_all_erome_image_urls(album_links)
         return {"images": images}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- Fapello and JPG5 Endpoints remain unchanged --- #
+# Bunkr Albums Endpoint (username only)
+@app.get("/api/bunkr-albums")
+async def get_bunkr_albums(username: str):
+    try:
+        albums = await get_all_album_links_from_search(username)
+        return {"albums": albums}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Bunkr Gallery Endpoint (supports URL or username)
+@app.get("/api/bunkr-gallery")
+async def get_bunkr_gallery(query: str):
+    try:
+        async with aiohttp.ClientSession() as session:
+            # If query looks like a URL, treat it as an album URL directly.
+            if query.startswith("http"):
+                image_page_links = await get_image_links_from_album(query, session)
+                tasks = [get_image_url_from_link(link, session) for link in image_page_links]
+                results = await asyncio.gather(*tasks)
+                images = [url for url in results if url is not None and not thumb_pattern.search(url)]
+                # Validate the URLs
+                validation_tasks = [validate_url(url, session) for url in images]
+                validated_results = await asyncio.gather(*validation_tasks)
+                images = [url for url in validated_results if url is not None and not thumb_pattern.search(url)]
+            else:
+                images = await fetch_bunkr_gallery_images(query)
+        return {"images": images}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/fapello-gallery")
 async def get_fapello_gallery(album_url: str):
     if "fapello.com" not in album_url:
@@ -398,15 +356,14 @@ async def get_jpg5_gallery(album_url: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- Stats Endpoint --- #
+# ------------------- Stats Endpoint ------------------- #
 @app.get("/api/stats")
 async def get_stats():
-    online_users = len(active_connections)  # Count of active WebSocket connections
+    online_users = len(active_connections)
     return {"totalVisits": total_visits, "onlineUsers": online_users}
 
 # ------------------- Real WebSocket Logic for Live Stats ------------------- #
 async def broadcast_stats():
-    """Broadcast the current stats to all connected WebSocket clients."""
     stats = {"totalVisits": total_visits, "onlineUsers": len(active_connections)}
     message = json.dumps(stats)
     for connection in list(active_connections):
